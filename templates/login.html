@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion – Programme de permanence</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="login-body">
+
+    <div class="login-container">
+        <img src="{{ url_for('static', filename='logo_douanes.png') }}" class="logo">
+        <h2>Connexion – Programme de permanence</h2>
+
+        {% if erreur %}
+            <p class="error">{{ erreur }}</p>
+        {% endif %}
+
+        <form method="POST">
+            <input type="text" name="nom" placeholder="Nom" required>
+            <input type="text" name="prenom" placeholder="Prénom" required>
+            <button type="submit">Se connecter</button>
+        </form>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ajouter téléphone</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="login-body">
+
+    <div class="login-container">
+        <h2>📞 Ajouter votre numéro</h2>
+
+        <form method="POST">
+            <input type="tel" name="telephone" placeholder="Ex: 70123456" required>
+            <button type="submit">Enregistrer</button>
+        </form>
+    </div>
+
+</body>
+</html>

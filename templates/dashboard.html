@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Programme de permanence</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="dashboard-body">
+
+    <div class="app-shell">
+        <aside class="sidebar">
+            <h3>Navigation</h3>
+            <a href="{{ url_for('dashboard') }}">🏠 Tableau de bord</a>
+            <a href="{{ url_for('menu') }}">📅 Planning</a>
+            <a href="{{ url_for('logout') }}">🔒 Déconnexion</a>
+            
+            <hr style="margin:15px 0; border: none; border-top: 1px solid #444;">
+            
+            <h3>Rotation </h3>
+            <div id="rotationInfo">
+                <button class="shift-btn" data-guerite="Nord">🔴 Nord</button>
+                <button class="shift-btn" data-guerite="Sud">🔵 Sud</button>
+            </div>
+            <div id="shiftDetails" style="margin-top:10px; font-size:0.85em; padding:8px; background:#242424; border-radius:4px;">Chargement...</div>
+        </aside>
+
+        <div class="main-content">
+            <!-- HEADER -->
+            <header class="dashboard-header">
+                <h1>📋 Programme de permanence — Tableau de bord</h1>
+                <p>Bienvenue <strong>{{ prenom }} {{ nom }}</strong></p>
+            </header>
+
+            <!-- CONTENU PRINCIPAL -->
+            <main class="dashboard-main">
+
+        <h2>🔔 Vos alertes de permanence</h2>
+
+        {% if alertes and alertes|length > 0 %}
+            <table class="alertes-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Heure</th>
+                        <th>Message</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alerte in alertes %}
+                    <tr>
+                        <td>{{ alerte.get('Date','') }}</td>
+                        <td>{{ alerte.get('Heure','') }}</td>
+                        <td>{{ alerte.get('Message','') }}</td>
+                        <td>
+                            <button onclick="stopAlarm()" class="btn-stop">
+                                🔕 Couper l’alarme
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-alert">
+                ✅ Aucune alerte pour le moment.
+            </p>
+        {% endif %}
+
+            </main>
+
+            <!-- AUDIO ALARME -->
+            <audio id="alarmeAudio" src="{{ url_for('static', filename='alarme.mp3') }}"></audio>
+
+            <!-- MODAL D'ALERTE -->
+            <div id="alertModal">
+                <div class="alert-content" id="alertContent">Chargement...</div>
+            </div>
+
+            <!-- SCRIPT -->
+            <script>
+                let alertActive = false;
+                const audioEl = document.getElementById('alarmeAudio');
+                // stop alarm
+                function stopAlarm(){
+                    try{
+                        if (audioEl){ audioEl.pause(); audioEl.currentTime = 0; }
+                    }catch(e){/*ignore*/}
+                    alertActive = false;
+                    const modal = document.getElementById('alertModal');
+                    if (modal) modal.style.display = 'none';
+                }
+
+                // Play alarm with fallback to WebAudio
+                function playAlarm(){
+                    if (audioEl){
+                        audioEl.loop = true;
+                        audioEl.play().catch(()=>{
+                            // fallback: simple beep
+                            try{ window.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+                                const o = window.audioCtx.createOscillator();
+                                const g = window.audioCtx.createGain();
+                                o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.05;
+                                o.connect(g); g.connect(window.audioCtx.destination); o.start(); window._osc = o; window._gain=g;
+                            }catch(e){}
+                        });
+                    }else{
+                        try{ window.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+                            const o = window.audioCtx.createOscillator();
+                            const g = window.audioCtx.createGain();
+                            o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.05;
+                            o.connect(g); g.connect(window.audioCtx.destination); o.start(); window._osc = o; window._gain=g;
+                        }catch(e){}
+                    }
+                }
+                function stopFallback(){ if(window._osc){ try{window._osc.stop(); window._osc.disconnect(); window._gain.disconnect(); }catch(e){} window._osc=null; window._gain=null;} }
+
+                async function showAlert(slot){
+                    alertActive = true;
+                    const modal = document.getElementById('alertModal');
+                    if (!modal) return;
+                    // build members by guérite
+                    const byG = {};
+                    (slot.members||[]).forEach(m=>{ byG[m.guerite] = byG[m.guerite] || []; byG[m.guerite].push(m); });
+                    let html = `<h2>🔔 ALERTE — SERVICE DANS 30 MIN</h2>`;
+                    html += `<p><strong>Groupe ${slot.group}</strong><br>${slot.display}</p>`;
+                    Object.keys(byG).sort().forEach(g=>{
+                        const list = byG[g].map(m=> m.name + (m.service? ' (EN SERVICE)':''));
+                        html += `<div class="alert-details"><strong>${g}</strong>: ${list.join(', ')}</div>`;
+                    });
+                    html += `<button class="stop-alarm-btn" onclick="stopAlarm(); stopFallback();">Couper l'alarme</button>`;
+                    document.getElementById('alertContent').innerHTML = html;
+                    modal.style.display = 'block';
+                    playAlarm();
+                }
+
+                // Vérifier si alerte 30min
+                async function checkAlert(){
+                    try{
+                        const res = await fetch("{{ url_for('alert_check') }}");
+                        const data = await res.json();
+                        if (data.should_alert && !alertActive){
+                            await showAlert(data.slot);
+                        }
+                    }catch(e){console.error(e)}
+                }
+
+                // Charger infos rotation
+                async function loadShiftInfo(){
+                    try {
+                        const res = await fetch("{{ url_for('current_shift') }}");
+                        const data = await res.json();
+                        if (!data || !data.group) {
+                            document.getElementById('shiftDetails').innerHTML = 'Aucun créneau disponible';
+                            return;
+                        }
+                        let html = `<strong>Groupe ${data.group}</strong><br>`;
+                        html += `${data.display}<br><br>`;
+                        const byGuerite = {};
+                        (data.members || []).forEach(m => { if (!byGuerite[m.guerite]) byGuerite[m.guerite]=[]; byGuerite[m.guerite].push(m.name); });
+                        Object.keys(byGuerite).sort().forEach(g => { const isService = (g===data.guerite_service); const style = isService? 'style="color:#0f0"':''; html += `<div ${style}><strong>${g}</strong>: ${byGuerite[g].join(', ')}</div>`; });
+                        document.getElementById('shiftDetails').innerHTML = html;
+                    } catch(err) { console.error(err); }
+                }
+
+                // init
+                loadShiftInfo(); setInterval(loadShiftInfo, 30000);
+                checkAlert(); setInterval(checkAlert, 60000);
+            </script>
+        </div>
+    </div>
+
+</body>
+</html>

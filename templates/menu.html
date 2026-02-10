@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Programme de permanence</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .menu-main { padding: 20px; }
+        .schedule-table { width: 100%; border-collapse: collapse; }
+        .schedule-table th, .schedule-table td { border: 1px solid #444; padding: 8px; text-align: left; }
+        .schedule-table td > div { margin: 4px 0; padding: 4px; border-radius: 3px; }
+    </style>
+</head>
+
+<body class="dashboard-body">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <h3>Navigation</h3>
+            <a href="{{ url_for('dashboard') }}">🏠 Tableau de bord</a>
+            <a href="{{ url_for('menu') }}">📅 Planning</a>
+            <a href="{{ url_for('logout') }}">🔒 Déconnexion</a>
+            
+            <hr style="margin:15px 0; border: none; border-top: 1px solid #444;">
+            
+            <h3>Rotation </h3>
+            <div id="rotationInfo">
+                <button class="shift-btn" data-guerite="Nord">🔴 Nord</button>
+                <button class="shift-btn" data-guerite="Sud">🔵 Sud</button>
+            </div>
+            <div id="shiftDetails" style="margin-top:10px; font-size:0.85em; padding:8px; background:#242424; border-radius:4px;">Chargement...</div>
+        </aside>
+
+        <div class="main-content">
+            <header class="dashboard-header">
+                <h1>📅 Programme de permanence — Planning</h1>
+                <p>Bonjour <strong>{{ prenom }} {{ nom }}</strong></p>
+            </header>
+
+            <main class="menu-main">
+        <h2>Rotation (2h par créneau, de 6h à 18h, 4 jours)</h2>
+
+        <table class="schedule-table" id="scheduleTable">
+            <thead>
+                <tr><th>Créneau</th><th>Groupe</th><th>Service</th><th>Membres</th></tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="4">Chargement…</td></tr>
+            </tbody>
+        </table>
+        
+        <h3 style="margin-top:20px">Liste des personnes (info)</h3>
+        {% if personnes and personnes|length > 0 %}
+            <table class="schedule-table">
+                <thead>
+                    <tr><th>Prénom</th><th>Nom</th><th>Groupe</th></tr>
+                </thead>
+                <tbody>
+                {% for p in personnes %}
+                    <tr>
+                        <td>{{ p.prenom }}</td>
+                        <td>{{ p.nom }}</td>
+                        <td>{{ p.groupe }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Aucune personne disponible.</p>
+        {% endif %}
+            </main>
+
+                    <script>
+        async function fetchSchedule(){
+            try{
+                const res = await fetch("{{ url_for('menu_data') }}");
+                const data = await res.json();
+                const tbody = document.querySelector('#scheduleTable tbody');
+                tbody.innerHTML = '';
+                if(!data || data.length === 0){
+                    tbody.innerHTML = '<tr><td colspan="4">Aucun planning disponible</td></tr>';
+                    return;
+                }
+                data.forEach(slot => {
+                    const tr = document.createElement('tr');
+                    const tdTime = document.createElement('td');
+                    tdTime.textContent = slot.display;
+                    const tdGroup = document.createElement('td');
+                    tdGroup.textContent = slot.group;
+                    const tdService = document.createElement('td');
+                    tdService.textContent = slot.guerite_service || '-';
+                    const tdMembers = document.createElement('td');
+                    
+                    // Organiser les membres par guérite
+                    const membersByGuerite = {};
+                    (slot.members || []).forEach(m => {
+                        if (!membersByGuerite[m.guerite]) {
+                            membersByGuerite[m.guerite] = [];
+                        }
+                        membersByGuerite[m.guerite].push(m.name);
+                    });
+                    
+                    let membersHtml = '';
+                    Object.keys(membersByGuerite).sort().forEach(g => {
+                        const isService = (g === slot.guerite_service);
+                        const style = isService ? 'font-weight: bold; background: #2a5a2a;' : '';
+                        const label = isService ? `(${g} - SERVICE)` : `(${g})`;
+                        membersHtml += `<div style="${style}">${membersByGuerite[g].join(', ')} ${label}</div>`;
+                    });
+                    
+                    tdMembers.innerHTML = membersHtml;
+                    tr.appendChild(tdTime);
+                    tr.appendChild(tdGroup);
+                    tr.appendChild(tdService);
+                    tr.appendChild(tdMembers);
+                    tbody.appendChild(tr);
+                });
+            }catch(err){
+                console.error(err);
+            }
+        }
+
+        // Actualisation régulière
+        fetchSchedule();
+        setInterval(fetchSchedule, 30000); // toutes les 30s
+        
+        // Charger et afficher les infos de rotation
+        async function loadShiftInfo(){
+            try {
+                const res = await fetch("{{ url_for('current_shift') }}");
+                const data = await res.json();
+                if (!data || !data.group) {
+                    document.getElementById('shiftDetails').innerHTML = 'Aucun créneau disponible';
+                    return;
+                }
+                
+                let html = `<strong>Groupe ${data.group}</strong><br>`;
+                html += `${data.display}<br><br>`;
+                
+                // Organiser par guérite
+                const byGuerite = {};
+                (data.members || []).forEach(m => {
+                    if (!byGuerite[m.guerite]) byGuerite[m.guerite] = [];
+                    byGuerite[m.guerite].push(m.name);
+                });
+                
+                Object.keys(byGuerite).sort().forEach(g => {
+                    const isService = (g === data.guerite_service);
+                    const style = isService ? 'style="color:#0f0;"' : '';
+                    html += `<div ${style}><strong>${g}</strong>: ${byGuerite[g].join(', ')}</div>`;
+                });
+                
+                document.getElementById('shiftDetails').innerHTML = html;
+            } catch(err) {
+                console.error(err);
+            }
+        }
+        
+        loadShiftInfo();
+        setInterval(loadShiftInfo, 30000); // Actualiser toutes les 30s
+            </script>
+        </div>
+    </div>
+
+</body>
+</html>
