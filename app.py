@@ -13,8 +13,8 @@ app.secret_key = "cle_secrete_permanence_2026"
 # Date réelle de démarrage du système
 START_DATE = datetime(2026, 2, 10, 6, 0)
 
-# Groupe 7 commence au démarrage (index 6 en base 0)
-GROUP_START_OFFSET = 6
+# Groupe 1 commence au démarrage (index 0 en base 0)
+GROUP_START_OFFSET = 0
 
 
 # =========================
@@ -79,6 +79,16 @@ def generate_schedule(start_dt, days=30):
     if not group_ids:
         return []
 
+    # Initialiser les compteurs de service pour chaque membre
+    member_service_count = {}
+    member_last_guerite = {}
+    
+    for group_id in group_ids:
+        for guerite in groups[group_id]:
+            for member in groups[group_id][guerite]:
+                member_service_count[member] = 0
+                member_last_guerite[member] = None
+
     schedule = []
     slot_index = 0
 
@@ -91,20 +101,33 @@ def generate_schedule(start_dt, days=30):
             group_index = (slot_index + GROUP_START_OFFSET) % len(group_ids)
             group_id = group_ids[group_index]
 
-            cycle = slot_index // len(group_ids)
-
             guerites_in_group = sorted(groups[group_id].keys())
-            guerite_service = guerites_in_group[cycle % len(guerites_in_group)]
+            
+            # Déterminer la guérite de service en alternant
+            if slot_index % 2 == 0:
+                guerite_service = 'Nord'
+            else:
+                guerite_service = 'Sud'
 
             all_members = []
 
             for g in guerites_in_group:
                 members = groups[group_id].get(g, [])
                 for m in members:
+                    # Déterminer la guérite actuelle du membre (alternance)
+                    if member_last_guerite[m] is None:
+                        # Premier service : guérite d'origine
+                        current_guerite = g
+                    else:
+                        # Alterner entre Nord et Sud
+                        current_guerite = 'Sud' if member_last_guerite[m] == 'Nord' else 'Nord'
+                    
+                    member_last_guerite[m] = current_guerite
+                    
                     all_members.append({
                         'name': m,
-                        'guerite': g,
-                        'service': (g == guerite_service)
+                        'guerite': current_guerite,
+                        'service': (current_guerite == guerite_service)
                     })
 
             end_time = slot_time + timedelta(hours=2)
@@ -217,11 +240,30 @@ def dashboard():
     else:
         alertes_utilisateur = pd.DataFrame()
 
+    # Récupérer les permanences de l'utilisateur connecté
+    schedule = generate_schedule(START_DATE, days=30)
+    user_permanences = []
+    user_name = f"{session['prenom']} {session['nom']}".strip().lower()
+    
+    for slot in schedule:
+        for member in slot.get('members', []):
+            if member['name'].strip().lower() == user_name:
+                user_permanences.append({
+                    'date': slot['date'],
+                    'display': slot['display'],
+                    'guerite': member['guerite'],
+                    'service': member['service'],
+                    'group': slot['group'],
+                    'alert_time': (datetime.fromisoformat(slot['iso']) - timedelta(minutes=30)).strftime('%d/%m %H:%M')
+                })
+                break
+
     return render_template(
         "dashboard.html",
         nom=session["nom"],
         prenom=session["prenom"],
-        alertes=alertes_utilisateur.to_dict(orient="records")
+        alertes=alertes_utilisateur.to_dict(orient="records"),
+        user_permanences=user_permanences
     )
 
 

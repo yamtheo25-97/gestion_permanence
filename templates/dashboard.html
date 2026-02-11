@@ -35,6 +35,46 @@
             <!-- CONTENU PRINCIPAL -->
             <main class="dashboard-main">
 
+        <!-- PERMANENCES DE L'UTILISATEUR -->
+        <h2>📅 Vos permanences</h2>
+
+        {% if user_permanences and user_permanences|length > 0 %}
+            <table class="permanences-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Heure</th>
+                        <th>Groupe</th>
+                        <th>Guérite</th>
+                        <th>Service</th>
+                        <th>Alerte</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for perm in user_permanences %}
+                    <tr>
+                        <td>{{ perm.date }}</td>
+                        <td>{{ perm.display }}</td>
+                        <td>Groupe {{ perm.group }}</td>
+                        <td>{{ perm.guerite }}</td>
+                        <td>
+                            {% if perm.service %}
+                                <span style="color: #0f0; font-weight: bold;">✓ En service</span>
+                            {% else %}
+                                <span style="color: #ff0;">⚡ En attente</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ perm.alert_time }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-permanence">
+                ℹ️ Aucune permanence prévue pour vous dans les 30 prochains jours.
+            </p>
+        {% endif %}
+
         <h2>🔔 Vos alertes de permanence</h2>
 
         {% if alertes and alertes|length > 0 %}
@@ -54,8 +94,8 @@
                         <td>{{ alerte.get('Heure','') }}</td>
                         <td>{{ alerte.get('Message','') }}</td>
                         <td>
-                            <button onclick="stopAlarm()" class="btn-stop">
-                                🔕 Couper l’alarme
+                            <button onclick="stopAlarm()" class="btn-stop" style="background: #ff4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                                🔕 Couper l'alarme
                             </button>
                         </td>
                     </tr>
@@ -85,8 +125,18 @@
                 // stop alarm
                 function stopAlarm(){
                     try{
-                        if (audioEl){ audioEl.pause(); audioEl.currentTime = 0; }
+                        // Arrêter l'audio principal
+                        if (audioEl){ 
+                            audioEl.pause(); 
+                            audioEl.currentTime = 0; 
+                        }
                     }catch(e){/*ignore*/}
+                    
+                    // Arrêter le fallback WebAudio
+                    try{
+                        stopFallback();
+                    }catch(e){/*ignore*/}
+                    
                     alertActive = false;
                     const modal = document.getElementById('alertModal');
                     if (modal) modal.style.display = 'none';

@@ -121,6 +121,51 @@ body {
     text-align: center;
 }
 
+.permanences-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+}
+
+.permanences-table th,
+.permanences-table td {
+    border: 1px solid #444;
+    padding: 12px;
+    text-align: center;
+}
+
+.permanences-table th {
+    background: #2a2a2a;
+    font-weight: bold;
+}
+
+.permanences-table tr:nth-child(even) {
+    background: #1a1a1a;
+}
+
+.permanences-table tr:hover {
+    background: #2a2a2a;
+}
+
+.no-permanence {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 20px;
+    background: #1a1a1a;
+    border-radius: 6px;
+    margin-bottom: 30px;
+}
+
+.no-alert {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 20px;
+    background: #1a1a1a;
+    border-radius: 6px;
+}
+
 .btn-stop {
     background: crimson;
     color: white;
