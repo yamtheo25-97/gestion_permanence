@@ -9,7 +9,14 @@
 <body class="dashboard-body">
 
     <div class="app-shell">
-        <aside class="sidebar">
+        <!-- BOUTON HAMBURGER -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <aside class="sidebar" id="sidebar">
             <h3>Navigation</h3>
             <a href="{{ url_for('dashboard') }}">🏠 Tableau de bord</a>
             <a href="{{ url_for('menu') }}">📅 Planning</a>
@@ -111,7 +118,7 @@
             </main>
 
             <!-- AUDIO ALARME -->
-            <audio id="alarmeAudio" src="{{ url_for('static', filename='alarme.mp3') }}"></audio>
+            <audio id="alarmeAudio" src="{{ url_for('static', filename='alarm.wav') }}"></audio>
 
             <!-- MODAL D'ALERTE -->
             <div id="alertModal">
@@ -191,9 +198,18 @@
                         const res = await fetch("{{ url_for('alert_check') }}");
                         const data = await res.json();
                         if (data.should_alert && !alertActive){
+                            console.log('ALERTE DÉTECTÉE - Lancement de l\'alarme');
                             await showAlert(data.slot);
                         }
-                    }catch(e){console.error(e)}
+                    }catch(e){
+                        console.error('Erreur lors de la vérification d\'alerte:', e);
+                    }
+                }
+
+                // Forcer la vérification immédiate au chargement
+                async function forceCheckAlert(){
+                    console.log('Vérification forcée des alertes...');
+                    await checkAlert();
                 }
 
                 // Charger infos rotation
@@ -215,8 +231,35 @@
                 }
 
                 // init
-                loadShiftInfo(); setInterval(loadShiftInfo, 30000);
-                checkAlert(); setInterval(checkAlert, 60000);
+                loadShiftInfo(); 
+                setInterval(loadShiftInfo, 30000);
+                
+                // Vérification des alertes : immédiate puis toutes les 30 secondes
+                forceCheckAlert(); 
+                setInterval(checkAlert, 30000);
+            </script>
+            
+            <script>
+                // Fonction pour basculer la sidebar
+                function toggleSidebar() {
+                    const sidebar = document.getElementById('sidebar');
+                    const hamburgerBtn = document.getElementById('hamburgerBtn');
+                    
+                    sidebar.classList.toggle('collapsed');
+                    hamburgerBtn.classList.toggle('active');
+                }
+                
+                // Fermer la sidebar en cliquant à l'extérieur
+                document.addEventListener('click', function(event) {
+                    const sidebar = document.getElementById('sidebar');
+                    const hamburgerBtn = document.getElementById('hamburgerBtn');
+                    
+                    if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                        if (sidebar.classList.contains('collapsed')) {
+                            toggleSidebar();
+                        }
+                    }
+                });
             </script>
         </div>
     </div>

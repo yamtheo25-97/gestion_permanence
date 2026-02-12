@@ -6,6 +6,9 @@ import os
 app = Flask(__name__)
 app.secret_key = "cle_secrete_permanence_2026"
 
+# Configuration de la session (30 jours pour "remember me")
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+
 # =========================
 # CONFIGURATION SYSTÈME
 # =========================
@@ -155,6 +158,7 @@ def login():
     if request.method == "POST":
         nom = request.form["nom"].strip()
         prenom = request.form["prenom"].strip()
+        remember = request.form.get("remember", "off") == "on"
 
         df = charger_eleves()
 
@@ -168,8 +172,9 @@ def login():
 
         session["nom"] = nom
         session["prenom"] = prenom
+        session.permanent = remember  # Rendre la session persistante si "remember me" est coché
 
-        return redirect(url_for("menu"))
+        return redirect(url_for("dashboard"))
 
     return render_template("login.html")
 
