@@ -14,7 +14,14 @@
 
 <body class="dashboard-body">
     <div class="app-shell">
-        <aside class="sidebar">
+        <!-- BOUTON HAMBURGER -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <aside class="sidebar collapsed" id="sidebar">
             <h3>Navigation</h3>
             <a href="{{ url_for('dashboard') }}">🏠 Tableau de bord</a>
             <a href="{{ url_for('menu') }}">📅 Planning</a>
@@ -157,6 +164,27 @@
         
         loadShiftInfo();
         setInterval(loadShiftInfo, 30000); // Actualiser toutes les 30s
+        
+        // Fonction pour basculer la sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            sidebar.classList.toggle('collapsed');
+            hamburgerBtn.classList.toggle('active');
+        }
+        
+        // Fermer la sidebar en cliquant à l'extérieur
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
             </script>
         </div>
     </div>
