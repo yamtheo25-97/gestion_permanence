@@ -16,7 +16,7 @@
             <span></span>
         </button>
 
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar collapsed" id="sidebar">
             <h3>Navigation</h3>
             <a href="{{ url_for('dashboard') }}">🏠 Tableau de bord</a>
             <a href="{{ url_for('menu') }}">📅 Planning</a>
@@ -177,15 +177,39 @@
                     alertActive = true;
                     const modal = document.getElementById('alertModal');
                     if (!modal) return;
+                    
+                    // Récupérer le nom de l'utilisateur connecté
+                    const userName = "{{ prenom }} {{ nom }}".trim();
+                    
                     // build members by guérite
                     const byG = {};
                     (slot.members||[]).forEach(m=>{ byG[m.guerite] = byG[m.guerite] || []; byG[m.guerite].push(m); });
-                    let html = `<h2>🔔 ALERTE — SERVICE DANS 30 MIN</h2>`;
-                    html += `<p><strong>Groupe ${slot.group}</strong><br>${slot.display}</p>`;
-                    Object.keys(byG).sort().forEach(g=>{
-                        const list = byG[g].map(m=> m.name + (m.service? ' (EN SERVICE)':''));
-                        html += `<div class="alert-details"><strong>${g}</strong>: ${list.join(', ')}</div>`;
-                    });
+                    
+                    let html = `<h2>🔔 ALERTE — VOTRE SERVICE DANS 30 MIN</h2>`;
+                    html += `<p><strong>${userName}</strong> - Groupe ${slot.group}<br>${slot.display}</p>`;
+                    
+                    // Trouver la guérite de l'utilisateur
+                    let userGuerite = null;
+                    let userIsService = false;
+                    
+                    for (const [guerite, members] of Object.entries(byG)) {
+                        const userInGuerite = members.find(m => m.name.toLowerCase() === userName.toLowerCase());
+                        if (userInGuerite) {
+                            userGuerite = guerite;
+                            userIsService = userInGuerite.service;
+                            break;
+                        }
+                    }
+                    
+                    if (userGuerite) {
+                        const statusText = userIsService ? "✅ EN SERVICE" : "⏰ EN ATTENTE";
+                        const statusColor = userIsService ? "#0f0" : "#ff0";
+                        html += `<div style="background: #242424; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid ${statusColor};">`;
+                        html += `<strong style="color: ${statusColor};">📍 Votre guérite: ${userGuerite}</strong><br>`;
+                        html += `<strong style="color: ${statusColor};">${statusText}</strong>`;
+                        html += `</div>`;
+                    }
+                    
                     html += `<button class="stop-alarm-btn" onclick="stopAlarm(); stopFallback();">Couper l'alarme</button>`;
                     document.getElementById('alertContent').innerHTML = html;
                     modal.style.display = 'block';

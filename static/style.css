@@ -200,12 +200,12 @@ body {
 
 .main-content { 
     flex: 1;
-    margin-left: 280px;
+    margin-left: 0;
     transition: margin-left 0.3s ease;
 }
 
-.sidebar.collapsed + .main-content {
-    margin-left: 0;
+.sidebar:not(.collapsed) + .main-content {
+    margin-left: 280px;
 }
 
 /* SHIFT BUTTONS */

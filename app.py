@@ -278,15 +278,24 @@ def dashboard():
 
 @app.route("/alert-check")
 def alert_check():
+    if "nom" not in session or "prenom" not in session:
+        return jsonify({'should_alert': False})
+    
     now = datetime.now()
     schedule = generate_schedule(START_DATE, days=30)
+    
+    # Nom complet de l'utilisateur connecté
+    user_name = f"{session['prenom']} {session['nom']}".strip().lower()
 
     for slot in schedule:
         slot_start = datetime.fromisoformat(slot['iso'])
         alert_time = slot_start - timedelta(minutes=30)
 
         if alert_time <= now < (alert_time + timedelta(seconds=60)):
-            return jsonify({'should_alert': True, 'slot': slot})
+            # Vérifier si l'utilisateur connecté est dans ce créneau
+            for member in slot.get('members', []):
+                if member['name'].strip().lower() == user_name:
+                    return jsonify({'should_alert': True, 'slot': slot})
 
     return jsonify({'should_alert': False})
 
