@@ -185,7 +185,7 @@
                     const byG = {};
                     (slot.members||[]).forEach(m=>{ byG[m.guerite] = byG[m.guerite] || []; byG[m.guerite].push(m); });
                     
-                    let html = `<h2> ALERTE — VOTRE SERVICE DANS 30 MIN</h2>`;
+                    let html = `<h2>ALERTE — VOTRE SERVICE DANS 30 MIN</h2>`;
                     html += `<p><strong>${userName}</strong> - Groupe ${slot.group}<br>${slot.display}</p>`;
                     
                     // Trouver la guérite de l'utilisateur
@@ -205,7 +205,7 @@
                         const statusText = userIsService ? "EN SERVICE" : "EN ATTENTE";
                         const statusColor = userIsService ? "#0f0" : "#ff0";
                         html += `<div style="background: #242424; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid ${statusColor};">`;
-                        html += `<strong style="color: ${statusColor};"> Votre guérite: ${userGuerite}</strong><br>`;
+                        html += `<strong style="color: ${statusColor};">Votre guérite: ${userGuerite}</strong><br>`;
                         html += `<strong style="color: ${statusColor};">${statusText}</strong>`;
                         html += `</div>`;
                     }

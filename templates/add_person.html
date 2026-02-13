@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ajouter une personne - Administration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="dashboard-body">
+    <div class="app-shell">
+        <!-- BOUTON HAMBURGER -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <aside class="sidebar collapsed" id="sidebar">
+            <h3>Administration</h3>
+            <a href="{{ url_for('admin') }}">Gestion des personnes</a>
+            <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
+            <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
+        </aside>
+
+        <div class="main-content">
+            <header class="dashboard-header">
+                <h1>Ajouter une personne au programme</h1>
+                <p>Connecté en tant que <strong>{{ prenom }} {{ nom }}</strong> (Administrateur)</p>
+            </header>
+
+            <main class="dashboard-main">
+                {% if erreur %}
+                    <div style="background: #ff4444; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        Erreur: {{ erreur }}
+                    </div>
+                {% endif %}
+
+                <form method="POST" style="max-width: 500px;">
+                    <div style="margin-bottom: 15px;">
+                        <label for="prenom" style="display: block; margin-bottom: 5px; font-weight: bold;">Prénom:</label>
+                        <input type="text" id="prenom" name="prenom" required 
+                               style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label for="nom" style="display: block; margin-bottom: 5px; font-weight: bold;">Nom:</label>
+                        <input type="text" id="nom" name="nom" required 
+                               style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label for="groupe" style="display: block; margin-bottom: 5px; font-weight: bold;">Groupe:</label>
+                        <input type="number" id="groupe" name="groupe" min="1" max="20" required 
+                               style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label for="guerite" style="display: block; margin-bottom: 5px; font-weight: bold;">Guérite:</label>
+                        <select id="guerite" name="guerite" required 
+                                style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                            <option value="Nord">Nord</option>
+                            <option value="Sud">Sud</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label for="telephone" style="display: block; margin-bottom: 5px; font-weight: bold;">Téléphone (optionnel):</label>
+                        <input type="text" id="telephone" name="telephone" 
+                               style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                    </div>
+
+                    <button type="submit" 
+                            style="background: #0f4c75; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                        Ajouter la personne
+                    </button>
+                    
+                    <a href="{{ url_for('admin') }}" 
+                       style="margin-left: 10px; color: #ccc; text-decoration: none;">
+                        Annuler
+                    </a>
+                </form>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour basculer la sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            sidebar.classList.toggle('collapsed');
+            hamburgerBtn.classList.toggle('active');
+        }
+        
+        // Fermer la sidebar en cliquant à l'extérieur
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

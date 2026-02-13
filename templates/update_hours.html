@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifier les heures - Administration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="dashboard-body">
+    <div class="app-shell">
+        <!-- BOUTON HAMBURGER -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <aside class="sidebar collapsed" id="sidebar">
+            <h3>Administration</h3>
+            <a href="{{ url_for('admin') }}">Gestion des personnes</a>
+            <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
+            <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
+        </aside>
+
+        <div class="main-content">
+            <header class="dashboard-header">
+                <h1>Modifier les heures de permanence et d'alerte</h1>
+                <p>Connecté en tant que <strong>{{ prenom }} {{ nom }}</strong> (Administrateur)</p>
+            </header>
+
+            <main class="dashboard-main">
+                {% if erreur %}
+                    <div style="background: #ff4444; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        Erreur: {{ erreur }}
+                    </div>
+                {% endif %}
+
+                {% if success %}
+                    <div style="background: #0f4c75; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        Paramètres mis à jour avec succès!
+                        <br>Heure de début: {{ start_hour }}h
+                        <br>Heure de fin: {{ end_hour }}h
+                        <br>Alerte: {{ alert_minutes }} minutes avant
+                    </div>
+                {% endif %}
+
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Paramètres actuels</h3>
+                    <p><strong>Heure de début:</strong> 6h00</p>
+                    <p><strong>Heure de fin:</strong> 18h00</p>
+                    <p><strong>Intervalle:</strong> 2 heures par créneau</p>
+                    <p><strong>Alerte:</strong> 30 minutes avant le service</p>
+                </div>
+
+                <form method="POST" style="max-width: 500px;">
+                    <div style="margin-bottom: 15px;">
+                        <label for="start_hour" style="display: block; margin-bottom: 5px; font-weight: bold;">Heure de début:</label>
+                        <select id="start_hour" name="start_hour" required 
+                                style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                            <option value="5">5h00</option>
+                            <option value="6" selected>6h00</option>
+                            <option value="7">7h00</option>
+                            <option value="8">8h00</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label for="end_hour" style="display: block; margin-bottom: 5px; font-weight: bold;">Heure de fin:</label>
+                        <select id="end_hour" name="end_hour" required 
+                                style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                            <option value="16">16h00</option>
+                            <option value="17">17h00</option>
+                            <option value="18" selected>18h00</option>
+                            <option value="19">19h00</option>
+                            <option value="20">20h00</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label for="alert_minutes" style="display: block; margin-bottom: 5px; font-weight: bold;">Alerte (minutes avant):</label>
+                        <select id="alert_minutes" name="alert_minutes" required 
+                                style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                            <option value="15">15 minutes</option>
+                            <option value="30" selected>30 minutes</option>
+                            <option value="45">45 minutes</option>
+                            <option value="60">60 minutes</option>
+                        </select>
+                    </div>
+
+                    <div style="background: #444; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        <p><strong>Note:</strong> Les modifications prendront effet au redémarrage de l'application.</p>
+                        <p>Les créneaux seront générés automatiquement avec un intervalle de 2 heures.</p>
+                    </div>
+
+                    <button type="submit" 
+                            style="background: #0f4c75; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                        Mettre à jour les heures
+                    </button>
+                    
+                    <a href="{{ url_for('admin') }}" 
+                       style="margin-left: 10px; color: #ccc; text-decoration: none;">
+                        Retour à l'administration
+                    </a>
+                </form>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour basculer la sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            sidebar.classList.toggle('collapsed');
+            hamburgerBtn.classList.toggle('active');
+        }
+        
+        // Fermer la sidebar en cliquant à l'extérieur
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

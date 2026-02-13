@@ -160,6 +160,14 @@ def login():
         prenom = request.form["prenom"].strip()
         remember = request.form.get("remember", "off") == "on"
 
+        # Vérification des identifiants administrateur
+        if nom.upper() == "IFPB" and prenom.upper() == "END":
+            session["nom"] = nom
+            session["prenom"] = prenom
+            session["is_admin"] = True
+            session.permanent = remember
+            return redirect(url_for("admin"))
+
         df = charger_eleves()
 
         match = df[
@@ -172,6 +180,7 @@ def login():
 
         session["nom"] = nom
         session["prenom"] = prenom
+        session["is_admin"] = False
         session.permanent = remember  # Rendre la session persistante si "remember me" est coché
 
         return redirect(url_for("dashboard"))
@@ -299,6 +308,108 @@ def alert_check():
 
     return jsonify({'should_alert': False})
 
+
+# =========================
+# ADMINISTRATION
+# =========================
+
+@app.route("/admin")
+def admin():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    df = charger_eleves()
+    personnes = []
+    
+    for _, row in df.iterrows():
+        personnes.append({
+            'prenom': str(row.get('Prenoms', '')).strip(),
+            'nom': str(row.get('Noms', '')).strip(),
+            'groupe': row.get('Groupe', ''),
+            'guerite': str(row.get('Guerite', '')).strip()
+        })
+    
+    return render_template("admin.html", 
+                       nom=session["nom"], 
+                       prenom=session["prenom"],
+                       personnes=personnes)
+
+@app.route("/admin/add_person", methods=["GET", "POST"])
+def add_person():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        try:
+            # Charger le fichier Excel existant
+            df = charger_eleves()
+            
+            # Ajouter la nouvelle personne
+            new_row = {
+                'Prenoms': request.form["prenom"].strip(),
+                'Noms': request.form["nom"].strip(),
+                'Groupe': int(request.form["groupe"]),
+                'Guerite': request.form["guerite"].strip(),
+                'telephone': request.form.get("telephone", "").strip()
+            }
+            
+            # Ajouter au DataFrame
+            df_new = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            
+            # Sauvegarder dans le fichier Excel
+            df_new.to_excel("eleves.xlsx", index=False, engine="openpyxl")
+            
+            return redirect(url_for("admin"))
+        except Exception as e:
+            return render_template("add_person.html", erreur=str(e))
+    
+    return render_template("add_person.html")
+
+@app.route("/admin/delete_person/<prenom>/<nom>")
+def delete_person(prenom, nom):
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    try:
+        # Charger le fichier Excel
+        df = charger_eleves()
+        
+        # Supprimer la personne
+        df_filtered = df[
+            ~((df["Prenoms"].str.strip() == prenom) & 
+              (df["Noms"].str.strip() == nom))
+        ]
+        
+        # Sauvegarder
+        df_filtered.to_excel("eleves.xlsx", index=False, engine="openpyxl")
+        
+    except Exception as e:
+        print(f"Erreur suppression: {e}")
+    
+    return redirect(url_for("admin"))
+
+@app.route("/admin/update_hours", methods=["GET", "POST"])
+def update_hours():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        try:
+            # Mettre à jour les heures dans le fichier de configuration
+            start_hour = int(request.form["start_hour"])
+            end_hour = int(request.form["end_hour"])
+            alert_minutes = int(request.form["alert_minutes"])
+            
+            # Pour l'instant, on affiche les valeurs (à intégrer dans la logique)
+            return render_template("update_hours.html", 
+                               success=True,
+                               start_hour=start_hour,
+                               end_hour=end_hour,
+                               alert_minutes=alert_minutes)
+        except Exception as e:
+            return render_template("update_hours.html", erreur=str(e))
+    
+    return render_template("update_hours.html")
 
 # =========================
 # LOGOUT

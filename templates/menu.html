@@ -23,23 +23,23 @@
 
         <aside class="sidebar collapsed" id="sidebar">
             <h3>Navigation</h3>
-            <a href="{{ url_for('dashboard') }}">🏠 Tableau de bord</a>
-            <a href="{{ url_for('menu') }}">📅 Planning</a>
-            <a href="{{ url_for('logout') }}">🔒 Déconnexion</a>
+            <a href="{{ url_for('dashboard') }}">Tableau de bord</a>
+            <a href="{{ url_for('menu') }}">Planning</a>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
             
             <hr style="margin:15px 0; border: none; border-top: 1px solid #444;">
             
             <h3>Rotation </h3>
             <div id="rotationInfo">
-                <button class="shift-btn" data-guerite="Nord">🔴 Nord</button>
-                <button class="shift-btn" data-guerite="Sud">🔵 Sud</button>
+                <button class="shift-btn" data-guerite="Nord">Nord</button>
+                <button class="shift-btn" data-guerite="Sud">Sud</button>
             </div>
             <div id="shiftDetails" style="margin-top:10px; font-size:0.85em; padding:8px; background:#242424; border-radius:4px;">Chargement...</div>
         </aside>
 
         <div class="main-content">
             <header class="dashboard-header">
-                <h1>📅 Programme de permanence — Planning</h1>
+                <h1>Programme de permanence — Planning</h1>
                 <p>Bonjour <strong>{{ prenom }} {{ nom }}</strong></p>
             </header>
 
