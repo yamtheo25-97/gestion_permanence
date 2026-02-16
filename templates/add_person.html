@@ -19,6 +19,10 @@
             <h3>Administration</h3>
             <a href="{{ url_for('admin') }}">Gestion des personnes</a>
             <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
+            <a href="{{ url_for('manage_groups') }}">Gestion des groupes</a>
+            <a href="{{ url_for('manage_students') }}">Gestion des élèves</a>
+            <a href="{{ url_for('manage_access_code') }}">Code d'accès</a>
+            <a href="{{ url_for('admin_planning') }}">Planning temps réel</a>
             <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
             <a href="{{ url_for('logout') }}">Déconnexion</a>
         </aside>

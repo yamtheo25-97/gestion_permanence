@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des élèves - Administration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="dashboard-body">
+    <div class="app-shell">
+        <!-- BOUTON HAMBURGER -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <aside class="sidebar collapsed" id="sidebar">
+            <h3>Administration</h3>
+            <a href="{{ url_for('admin') }}">Gestion des personnes</a>
+            <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
+            <a href="{{ url_for('manage_groups') }}">Gestion des groupes</a>
+            <a href="{{ url_for('manage_students') }}">Gestion des élèves</a>
+            <a href="{{ url_for('manage_access_code') }}">Code d'accès</a>
+            <a href="{{ url_for('admin_planning') }}">Planning temps réel</a>
+            <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
+        </aside>
+
+        <div class="main-content">
+            <header class="dashboard-header">
+                <h1>Gestion des élèves</h1>
+                <p>Connecté en tant que <strong>{{ prenom }} {{ nom }}</strong> (Administrateur)</p>
+            </header>
+
+            <main class="dashboard-main">
+                {% if erreur %}
+                    <div style="background: #ff4444; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        Erreur: {{ erreur }}
+                    </div>
+                {% endif %}
+
+                {% if success %}
+                    <div style="background: #0f4c75; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        {{ message }}
+                    </div>
+                {% endif %}
+
+                <!-- SUPPRIMER LA LISTE EXISTANTE -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Supprimer la liste existante</h3>
+                    <p style="color: #ccc; margin-bottom: 15px;">
+                        <strong>Attention:</strong> Cette action supprimera définitivement tous les élèves actuellement enregistrés.
+                    </p>
+                    <form method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer toute la liste d\'élèves ? Cette action est irréversible !')">
+                        <input type="hidden" name="action" value="delete_all">
+                        <button type="submit" 
+                                style="background: #d32f2f; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                            Supprimer toute la liste
+                        </button>
+                    </form>
+                </div>
+
+                <!-- AJOUTER UNE NOUVELLE LISTE -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Importer une nouvelle liste d'élèves</h3>
+                    <form method="POST" enctype="multipart/form-data" style="max-width: 500px;">
+                        <input type="hidden" name="action" value="upload_new">
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="file" style="display: block; margin-bottom: 5px; font-weight: bold;">Fichier Excel (.xlsx):</label>
+                            <input type="file" id="file" name="file" accept=".xlsx" required 
+                                   style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <label for="group_size" style="display: block; margin-bottom: 5px; font-weight: bold;">Nombre de personnes par groupe:</label>
+                            <select id="group_size" name="group_size" required 
+                                    style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                                <option value="2">2 personnes par groupe</option>
+                                <option value="3">3 personnes par groupe</option>
+                                <option value="4" selected>4 personnes par groupe</option>
+                                <option value="5">5 personnes par groupe</option>
+                                <option value="6">6 personnes par groupe</option>
+                                <option value="7">7 personnes par groupe</option>
+                                <option value="8">8 personnes par groupe</option>
+                                <option value="10">10 personnes par groupe</option>
+                            </select>
+                        </div>
+
+                        <div style="background: #444; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; color: #fff;">Format du fichier Excel requis:</h4>
+                            <ul style="color: #ccc; margin: 10px 0; padding-left: 20px;">
+                                <li><strong>Colonnes obligatoires:</strong> Prenoms, Noms, Groupe, Guerite</li>
+                                <li><strong>Colonne optionnelle:</strong> telephone</li>
+                                <li><strong>Guerite:</strong> "Nord" ou "Sud"</li>
+                                <li><strong>Groupe:</strong> Numéro du groupe (1, 2, 3...)</li>
+                            </ul>
+                        </div>
+
+                        <button type="submit" 
+                                style="background: #0f4c75; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                            Importer et organiser aléatoirement
+                        </button>
+                    </form>
+                </div>
+
+                <!-- INFORMATIONS -->
+                <div style="background: #444; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Organisation automatique</h3>
+                    <p>Lors de l'importation d'une nouvelle liste:</p>
+                    <ul style="color: #ccc; line-height: 1.6;">
+                        <li>Les élèves sont mélangés aléatoirement</li>
+                        <li>Les groupes sont formés automatiquement (4-5 élèves par groupe)</li>
+                        <li>La répartition garantit une distribution équilibrée</li>
+                        <li>Chaque élève conserve ses informations (nom, prénom, téléphone)</li>
+                        <li>Les guérites sont assignées automatiquement</li>
+                    </ul>
+                </div>
+
+                <!-- STATISTIQUES -->
+                <div style="background: #333; padding: 20px; border-radius: 8px;">
+                    <h3>Statistiques actuelles</h3>
+                    <p style="color: #ccc;">Les statistiques seront affichées ici une fois les données importées.</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: bold; color: #0f4c75;">-</div>
+                            <div style="color: #ccc; margin-top: 5px;">Total élèves</div>
+                        </div>
+                        <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: bold; color: #0f4c75;">-</div>
+                            <div style="color: #ccc; margin-top: 5px;">Nombre de groupes</div>
+                        </div>
+                        <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: bold; color: #0f4c75;">-</div>
+                            <div style="color: #ccc; margin-top: 5px;">Élèves/groupe</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour basculer la sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            sidebar.classList.toggle('collapsed');
+            hamburgerBtn.classList.toggle('active');
+        }
+        
+        // Fermer la sidebar en cliquant à l'extérieur
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

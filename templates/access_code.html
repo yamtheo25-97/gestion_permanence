@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion du code d'accès - Administration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="dashboard-body">
+    <div class="app-shell">
+        <!-- BOUTON HAMBURGER -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <aside class="sidebar collapsed" id="sidebar">
+            <h3>Administration</h3>
+            <a href="{{ url_for('admin') }}">Gestion des personnes</a>
+            <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
+            <a href="{{ url_for('manage_groups') }}">Gestion des groupes</a>
+            <a href="{{ url_for('manage_students') }}">Gestion des élèves</a>
+            <a href="{{ url_for('manage_access_code') }}">Code d'accès</a>
+            <a href="{{ url_for('admin_planning') }}">Planning temps réel</a>
+            <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
+        </aside>
+
+        <div class="main-content">
+            <header class="dashboard-header">
+                <h1>Gestion du code d'accès</h1>
+                <p>Connecté en tant que <strong>{{ prenom }} {{ nom }}</strong> (Administrateur)</p>
+            </header>
+
+            <main class="dashboard-main">
+                {% if erreur %}
+                    <div style="background: #ff4444; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        Erreur: {{ erreur }}
+                    </div>
+                {% endif %}
+
+                {% if success %}
+                    <div style="background: #0f4c75; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        {{ message }}
+                    </div>
+                {% endif %}
+
+                <!-- ÉTAT ACTUEL -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>État actuel du code d'accès</h3>
+                    {% if current_code %}
+                        <p style="color: #0f4c75; font-size: 18px; font-weight: bold;">
+                            Code actif: {{ current_code }}
+                        </p>
+                        <p style="color: #ccc;">
+                            Les utilisateurs doivent entrer ce code après leur nom et prénom pour accéder au système.
+                        </p>
+                    {% else %}
+                        <p style="color: #4CAF50; font-size: 18px; font-weight: bold;">
+                            Accès libre activé
+                        </p>
+                        <p style="color: #ccc;">
+                            Les utilisateurs peuvent accéder au système avec seulement leur nom et prénom.
+                        </p>
+                    {% endif %}
+                </div>
+
+                <!-- DÉFINIR UN NOUVEAU CODE -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Définir un nouveau code d'accès</h3>
+                    <form method="POST" style="max-width: 500px;">
+                        <input type="hidden" name="action" value="set_code">
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="new_code" style="display: block; margin-bottom: 5px; font-weight: bold;">Nouveau code d'accès (chiffres uniquement):</label>
+                            <input type="text" id="new_code" name="new_code" 
+                                   placeholder="Ex: 1234, 56789, etc."
+                                   pattern="[0-9]*"
+                                   maxlength="10"
+                                   style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                            <small style="color: #888; display: block; margin-top: 5px;">
+                                Laissez vide pour supprimer le code et activer l'accès libre
+                            </small>
+                        </div>
+
+                        <div style="background: #444; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; color: #fff;">Informations:</h4>
+                            <ul style="color: #ccc; margin: 10px 0; padding-left: 20px;">
+                                <li>Le code doit contenir uniquement des chiffres</li>
+                                <li>Maximum 10 chiffres</li>
+                                <li>Les utilisateurs devront entrer ce code après leur nom/prénom</li>
+                                <li>L'administrateur (IFPB/END) n'a pas besoin de code</li>
+                            </ul>
+                        </div>
+
+                        <button type="submit" 
+                                style="background: #0f4c75; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                            Définir le code
+                        </button>
+                    </form>
+                </div>
+
+                <!-- SUPPRIMER LE CODE -->
+                {% if current_code %}
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Supprimer le code d'accès</h3>
+                    <p style="color: #ccc; margin-bottom: 15px;">
+                        Cette action permettra à tous les utilisateurs d'accéder au système sans code d'accès.
+                    </p>
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="action" value="remove_code">
+                        <button type="submit" 
+                                onclick="return confirm('Êtes-vous sûr de vouloir supprimer le code d\'accès ? L\'accès sera libre pour tous les utilisateurs.')"
+                                style="background: #d32f2f; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                            Supprimer le code d'accès
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+
+                <!-- INFORMATIONS -->
+                <div style="background: #444; padding: 20px; border-radius: 8px;">
+                    <h3>Comment fonctionne le code d'accès</h3>
+                    <div style="color: #ccc; line-height: 1.6;">
+                        <p><strong>1. Configuration:</strong> L'administrateur définit un code numérique (ex: 1234)</p>
+                        <p><strong>2. Connexion utilisateur:</strong> Après avoir entré nom et prénom, l'utilisateur doit saisir le code</p>
+                        <p><strong>3. Vérification:</strong> Si le code est correct, l'utilisateur accède au système</p>
+                        <p><strong>4. Accès libre:</strong> Si aucun code n'est défini, l'accès est direct</p>
+                        <p><strong>5. Exception:</strong> L'administrateur (IFPB/END) n'a jamais besoin de code</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour basculer la sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            sidebar.classList.toggle('collapsed');
+            hamburgerBtn.classList.toggle('active');
+        }
+        
+        // Fermer la sidebar en cliquant à l'extérieur
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
+
+        // Validation du champ de code (uniquement des chiffres)
+        document.getElementById('new_code').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+</body>
+</html>

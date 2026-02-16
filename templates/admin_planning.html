@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Planning Administrateur</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-body">
+    <div class="app-shell">
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span><span></span><span></span>
+        </button>
+
+        <aside class="sidebar collapsed" id="sidebar">
+            <h3>Administration</h3>
+            <a href="{{ url_for('admin') }}">Gestion des personnes</a>
+            <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
+            <a href="{{ url_for('manage_groups') }}">Gestion des groupes</a>
+            <a href="{{ url_for('manage_students') }}">Gestion des élèves</a>
+            <a href="{{ url_for('manage_access_code') }}">Code d'accès</a>
+            <a href="{{ url_for('admin_planning') }}">Planning temps réel</a>
+            <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
+        </aside>
+
+        <div class="main-content">
+            <header class="dashboard-header">
+                <h1>Planning Administrateur - Temps Réel</h1>
+                <p>Connecté en tant que <strong>{{ prenom }} {{ nom }}</strong> (Administrateur)</p>
+            </header>
+
+            <main class="dashboard-main">
+                <!-- CRÉNEAU ACTUEL -->
+                {% if current_shift %}
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #0f4c75;">
+                    <h3 style="color: #0f4c75;">Créneau Actuel</h3>
+                    <p><strong>Horaires:</strong> {{ current_shift.display }}</p>
+                    <p><strong>Groupe:</strong> {{ current_shift.group }}</p>
+                    <p><strong>Guérite de service:</strong> {{ current_shift.guerite_service }}</p>
+                    
+                    <div style="margin-top: 15px;">
+                        <h4>Personnes en permanence:</h4>
+                        {% for member in current_shift.members %}
+                        <div style="{% if member.service %}background: #1a5f8a;{% else %}background: #444;{% endif %} padding: 10px; margin: 5px 0; border-radius: 5px; color: white;">
+                            <strong>{{ member.name }}</strong> - Guérite: {{ member.guerite }} 
+                            {% if member.service %}<span style="color: #4CAF50;"> (EN SERVICE)</span>{% else %}<span style="color: #ff9800;"> (EN ATTENTE)</span>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div style="background: #444; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Aucun créneau en cours</h3>
+                    <p>Il n'y a pas de permanence en ce moment.</p>
+                </div>
+                {% endif %}
+
+                <!-- PROCHAINS CRÉNEAUX -->
+                {% if next_shifts %}
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Prochains Créneaux</h3>
+                    {% for shift in next_shifts %}
+                    <div style="background: #333; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 3px solid #666;">
+                        <p><strong>{{ shift.display }}</strong> - Groupe {{ shift.group }}</p>
+                        <p>Guérite de service: {{ shift.guerite_service }}</p>
+                        <div style="margin-top: 10px; font-size: 0.9em; color: #ccc;">
+                            {% for member in shift.members %}
+                            {{ member.name }} ({{ member.guerite }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- PLANNING COMPLET -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px;">
+                    <h3>Planning Complet (30 jours)</h3>
+                    <div style="max-height: 500px; overflow-y: auto; margin-top: 15px;">
+                        <table class="permanences-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Horaires</th>
+                                    <th>Groupe</th>
+                                    <th>Guérite Service</th>
+                                    <th>Personnes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for shift in schedule %}
+                                <tr>
+                                    <td>{{ shift.date }}</td>
+                                    <td>{{ shift.display }}</td>
+                                    <td>{{ shift.group }}</td>
+                                    <td>{{ shift.guerite_service }}</td>
+                                    <td>
+                                        {% for member in shift.members %}
+                                        <div style="font-size: 0.85em;">
+                                            {{ member.name }} ({{ member.guerite }})
+                                            {% if member.service %}<span style="color: #4CAF50;"> ✓</span>{% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            sidebar.classList.toggle('collapsed');
+            hamburgerBtn.classList.toggle('active');
+        }
+        
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
+
+        // Auto-rafraîchissement toutes les 30 secondes
+        setTimeout(() => location.reload(), 30000);
+    </script>
+</body>
+</html>

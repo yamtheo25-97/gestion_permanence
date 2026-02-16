@@ -17,8 +17,18 @@
         {% endif %}
 
         <form method="POST">
-            <input type="text" name="nom" placeholder="Nom" required>
-            <input type="text" name="prenom" placeholder="Prénom" required>
+            <input type="text" name="nom" placeholder="Nom" required value="{{ nom or '' }}">
+            <input type="text" name="prenom" placeholder="Prénom" required value="{{ prenom or '' }}">
+            
+            {% if access_code_required %}
+            <div style="margin: 15px 0;">
+                <input type="text" name="access_code" placeholder="Code d'accès" required 
+                       style="width: 100%; padding: 12px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff; font-size: 16px;">
+                <small style="color: #888; display: block; margin-top: 5px; text-align: center;">
+                    Entrez le code d'accès fourni par l'administrateur
+                </small>
+            </div>
+            {% endif %}
             
             <div style="margin: 15px 0; text-align: left;">
                 <label style="display: flex; align-items: center; color: #ccc; font-size: 14px;">

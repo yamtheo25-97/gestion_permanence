@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des groupes - Administration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="dashboard-body">
+    <div class="app-shell">
+        <!-- BOUTON HAMBURGER -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <aside class="sidebar collapsed" id="sidebar">
+            <h3>Administration</h3>
+            <a href="{{ url_for('admin') }}">Gestion des personnes</a>
+            <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
+            <a href="{{ url_for('manage_groups') }}">Gestion des groupes</a>
+            <a href="{{ url_for('manage_students') }}">Gestion des élèves</a>
+            <a href="{{ url_for('manage_access_code') }}">Code d'accès</a>
+            <a href="{{ url_for('admin_planning') }}">Planning temps réel</a>
+            <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
+        </aside>
+
+        <div class="main-content">
+            <header class="dashboard-header">
+                <h1>Gestion des groupes</h1>
+                <p>Connecté en tant que <strong>{{ prenom }} {{ nom }}</strong> (Administrateur)</p>
+            </header>
+
+            <main class="dashboard-main">
+                {% if erreur %}
+                    <div style="background: #ff4444; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        Erreur: {{ erreur }}
+                    </div>
+                {% endif %}
+
+                {% if success %}
+                    <div style="background: #0f4c75; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        Groupe "{{ group_name }}" créé avec succès!
+                    </div>
+                {% endif %}
+
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Créer des groupes avec taille personnalisée</h3>
+                    <form method="POST" style="max-width: 500px;">
+                        <input type="hidden" name="action" value="create_groups">
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="group_size" style="display: block; margin-bottom: 5px; font-weight: bold;">Nombre de personnes par groupe:</label>
+                            <select id="group_size" name="group_size" required 
+                                    style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                                <option value="2">2 personnes par groupe</option>
+                                <option value="3">3 personnes par groupe</option>
+                                <option value="4" selected>4 personnes par groupe</option>
+                                <option value="5">5 personnes par groupe</option>
+                                <option value="6">6 personnes par groupe</option>
+                                <option value="7">7 personnes par groupe</option>
+                                <option value="8">8 personnes par groupe</option>
+                                <option value="10">10 personnes par groupe</option>
+                            </select>
+                        </div>
+
+                        <div style="background: #444; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; color: #fff;">Informations:</h4>
+                            <ul style="color: #ccc; margin: 10px 0; padding-left: 20px;">
+                                <li>Les élèves seront mélangés aléatoirement</li>
+                                <li>Les groupes seront créés automatiquement</li>
+                                <li>Les groupes existants seront remplacés</li>
+                                <li>Dernier groupe peut contenir moins de personnes</li>
+                            </ul>
+                        </div>
+
+                        <button type="submit" 
+                                onclick="return confirm('Êtes-vous sûr de vouloir recréer tous les groupes ? Cette action remplacera l\'organisation actuelle !')"
+                                style="background: #0f4c75; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                            Créer les groupes
+                        </button>
+                    </form>
+                </div>
+
+                {% if success and message %}
+                    <div style="background: #0f4c75; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                        {{ message }}
+                    </div>
+                {% endif %}
+
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Créer un groupe nommé</h3>
+                    <form method="POST" style="max-width: 500px;">
+                        <input type="hidden" name="action" value="create_named_group">
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="group_name" style="display: block; margin-bottom: 5px; font-weight: bold;">Nom du groupe:</label>
+                            <input type="text" id="group_name" name="group_name" required 
+                                   placeholder="Ex: Groupe A, Équipe Alpha, etc."
+                                   style="width: 100%; padding: 10px; border: 1px solid #444; border-radius: 5px; background: #2a2a2a; color: #fff;">
+                        </div>
+
+                        <button type="submit" 
+                                style="background: #0f4c75; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                            Créer le groupe nommé
+                        </button>
+                    </form>
+                </div>
+
+                <div style="background: #444; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Groupes actuels</h3>
+                    <p>Les groupes sont générés automatiquement à partir des données élèves.</p>
+                    <p>Chaque groupe contient environ 4-5 personnes pour assurer une bonne répartition.</p>
+                    <p>La rotation entre les guérites (Nord/Sud) est automatique.</p>
+                </div>
+
+                <div style="background: #333; padding: 20px; border-radius: 8px;">
+                    <h3>Informations sur la gestion des groupes</h3>
+                    <ul style="color: #ccc; line-height: 1.6;">
+                        <li>Les groupes sont numérotés automatiquement (1, 2, 3...)</li>
+                        <li>Chaque groupe suit une rotation Nord/Sud</li>
+                        <li>Les permanences sont de 2 heures par créneau</li>
+                        <li>Les alertes sont envoyées 30 minutes avant le service</li>
+                        <li>La répartition est équilibrée pour éviter les surcharges</li>
+                    </ul>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour basculer la sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            sidebar.classList.toggle('collapsed');
+            hamburgerBtn.classList.toggle('active');
+        }
+        
+        // Fermer la sidebar en cliquant à l'extérieur
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

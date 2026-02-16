@@ -10,7 +10,7 @@ app.secret_key = "cle_secrete_permanence_2026"
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
 # =========================
-# CONFIGURATION SYSTÈME
+# CONSTANTES
 # =========================
 
 # Date réelle de démarrage du système
@@ -19,9 +19,8 @@ START_DATE = datetime(2026, 2, 10, 6, 0)
 # Groupe 1 commence au démarrage (index 0 en base 0)
 GROUP_START_OFFSET = 0
 
-
 # =========================
-# CHARGEMENT DES DONNÉES
+# FONCTIONS UTILITAIRES
 # =========================
 
 def charger_eleves():
@@ -32,7 +31,6 @@ def charger_eleves():
     except Exception as e:
         print("Erreur chargement élèves :", e)
         return pd.DataFrame()
-
 
 def charger_alertes():
     try:
@@ -45,6 +43,26 @@ def charger_alertes():
     except Exception as e:
         print("Erreur chargement alertes :", e)
         return pd.DataFrame(columns=['Noms', 'Prenoms', 'Message', 'Date', 'Type'])
+
+def get_access_code():
+    """Récupérer le code d'accès actuel"""
+    try:
+        with open("access_code.txt", "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return None
+
+def set_access_code(code):
+    """Définir le code d'accès"""
+    with open("access_code.txt", "w") as f:
+        f.write(code if code else "")
+
+def verify_access_code(code):
+    """Vérifier si le code d'accès est correct"""
+    stored_code = get_access_code()
+    if not stored_code:  # Pas de code défini
+        return True
+    return code == stored_code
 
 
 # =========================
@@ -159,6 +177,7 @@ def login():
         nom = request.form["nom"].strip()
         prenom = request.form["prenom"].strip()
         remember = request.form.get("remember", "off") == "on"
+        access_code = request.form.get("access_code", "").strip()
 
         # Vérification des identifiants administrateur
         if nom.upper() == "IFPB" and prenom.upper() == "END":
@@ -178,6 +197,14 @@ def login():
         if match.empty:
             return render_template("login.html", erreur="Nom ou prénom incorrect")
 
+        # Vérifier le code d'accès si nécessaire
+        if not verify_access_code(access_code):
+            return render_template("login.html", 
+                               erreur="Code d'accès incorrect",
+                               nom=nom, 
+                               prenom=prenom,
+                               access_code_required=get_access_code() is not None)
+
         session["nom"] = nom
         session["prenom"] = prenom
         session["is_admin"] = False
@@ -185,7 +212,7 @@ def login():
 
         return redirect(url_for("dashboard"))
 
-    return render_template("login.html")
+    return render_template("login.html", access_code_required=get_access_code() is not None)
 
 
 # =========================
@@ -410,6 +437,214 @@ def update_hours():
             return render_template("update_hours.html", erreur=str(e))
     
     return render_template("update_hours.html")
+
+@app.route("/admin/manage_groups", methods=["GET", "POST"])
+def manage_groups():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        try:
+            action = request.form.get("action")
+            
+            if action == "create_groups":
+                # Créer des groupes avec taille personnalisée
+                group_size = int(request.form["group_size"])
+                
+                # Charger les élèves existants
+                df = charger_eleves()
+                
+                if df.empty:
+                    return render_template("manage_groups.html", 
+                                       erreur="Aucun élève trouvé dans la base de données")
+                
+                # Organiser les élèves en groupes avec la taille spécifiée
+                df_organized = organize_random_groups(df, group_size)
+                
+                # Sauvegarder les modifications
+                df_organized.to_excel("eleves.xlsx", index=False, engine="openpyxl")
+                
+                # Calculer les statistiques
+                total_students = len(df_organized)
+                num_groups = df_organized['Groupe'].nunique()
+                
+                return render_template("manage_groups.html", 
+                                   success=True,
+                                   group_size=group_size,
+                                   total_students=total_students,
+                                   num_groups=num_groups,
+                                   message=f"Groupes créés avec succès! {total_students} élèves répartis en {num_groups} groupes de {group_size} personnes maximum.")
+            
+            elif action == "create_named_group":
+                # Créer un groupe nommé (fonctionnalité future)
+                group_name = request.form["group_name"].strip()
+                if group_name:
+                    return render_template("manage_groups.html", 
+                                       success=True,
+                                       group_name=group_name,
+                                       message=f"Groupe '{group_name}' enregistré")
+                    
+        except Exception as e:
+            return render_template("manage_groups.html", erreur=str(e))
+    
+    return render_template("manage_groups.html")
+
+@app.route("/admin/access_code", methods=["GET", "POST"])
+def manage_access_code():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        try:
+            action = request.form.get("action")
+            
+            if action == "set_code":
+                new_code = request.form.get("new_code", "").strip()
+                
+                # Vérifier que le code ne contient que des chiffres
+                if new_code and not new_code.isdigit():
+                    return render_template("access_code.html", 
+                                       erreur="Le code d'accès ne doit contenir que des chiffres")
+                
+                set_access_code(new_code)
+                
+                if new_code:
+                    message = f"Code d'accès défini avec succès: {new_code}"
+                else:
+                    message = "Code d'accès supprimé. Accès libre activé."
+                
+                return render_template("access_code.html", 
+                                   success=True,
+                                   current_code=new_code,
+                                   message=message)
+            
+            elif action == "remove_code":
+                set_access_code("")
+                return render_template("access_code.html", 
+                                   success=True,
+                                   current_code="",
+                                   message="Code d'accès supprimé. Accès libre activé.")
+                    
+        except Exception as e:
+            return render_template("access_code.html", erreur=str(e))
+    
+    current_code = get_access_code()
+    return render_template("access_code.html", current_code=current_code)
+
+@app.route("/admin/planning")
+def admin_planning():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    # Récupérer le planning complet
+    schedule = generate_schedule(START_DATE, days=30)
+    
+    # Récupérer le créneau actuel
+    now = datetime.now()
+    current_shift = None
+    next_shifts = []
+    
+    for i, slot in enumerate(schedule):
+        slot_start = datetime.fromisoformat(slot['iso'])
+        slot_end = slot_start + timedelta(hours=2)
+        
+        if slot_start <= now < slot_end:
+            current_shift = slot
+        elif slot_start > now:
+            next_shifts.append(slot)
+            if len(next_shifts) >= 3:  # Garder seulement les 3 prochains créneaux
+                break
+    
+    return render_template("admin_planning.html", 
+                       nom=session["nom"], 
+                       prenom=session["prenom"],
+                       schedule=schedule,
+                       current_shift=current_shift,
+                       next_shifts=next_shifts)
+
+@app.route("/admin/manage_students", methods=["GET", "POST"])
+def manage_students():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        action = request.form.get("action")
+        
+        if action == "delete_all":
+            try:
+                # Supprimer le fichier Excel existant
+                if os.path.exists("eleves.xlsx"):
+                    os.remove("eleves.xlsx")
+                
+                # Créer un nouveau fichier vide avec les colonnes requises
+                empty_df = pd.DataFrame(columns=['Prenoms', 'Noms', 'Groupe', 'Guerite', 'telephone'])
+                empty_df.to_excel("eleves.xlsx", index=False, engine="openpyxl")
+                
+                return render_template("manage_students.html", 
+                                   success=True,
+                                   message="Liste d'élèves supprimée avec succès")
+            except Exception as e:
+                return render_template("manage_students.html", erreur=str(e))
+        
+        elif action == "upload_new":
+            try:
+                if 'file' not in request.files:
+                    return render_template("manage_students.html", 
+                                       erreur="Aucun fichier sélectionné")
+                
+                file = request.files['file']
+                if file.filename == '':
+                    return render_template("manage_students.html", 
+                                       erreur="Aucun fichier sélectionné")
+                
+                if file and file.filename.endswith('.xlsx'):
+                    # Sauvegarder le nouveau fichier
+                    file.save("eleves.xlsx")
+                    
+                    # Organiser les groupes aléatoirement avec taille personnalisée
+                    group_size = int(request.form.get("group_size", 4))
+                    df = pd.read_excel("eleves.xlsx", engine="openpyxl")
+                    df = organize_random_groups(df, group_size)
+                    df.to_excel("eleves.xlsx", index=False, engine="openpyxl")
+                    
+                    total_students = len(df)
+                    num_groups = df['Groupe'].nunique()
+                    
+                    return render_template("manage_students.html", 
+                                       success=True,
+                                       message=f"Nouvelle liste importée et organisée en {num_groups} groupes de {group_size} personnes maximum ({total_students} élèves au total)")
+                else:
+                    return render_template("manage_students.html", 
+                                       erreur="Veuillez sélectionner un fichier Excel (.xlsx)")
+            except Exception as e:
+                return render_template("manage_students.html", erreur=str(e))
+    
+    return render_template("manage_students.html")
+
+def organize_random_groups(df, group_size=None):
+    """Organiser les élèves en groupes de manière aléatoire avec taille personnalisée"""
+    if df.empty:
+        return df
+    
+    # Si aucune taille n'est spécifiée, utiliser 4 par défaut
+    if group_size is None:
+        group_size = 4
+    
+    # Mélanger les élèves aléatoirement
+    df_shuffled = df.sample(frac=1).reset_index(drop=True)
+    
+    # Assigner des groupes
+    total_students = len(df_shuffled)
+    num_groups = (total_students + group_size - 1) // group_size
+    
+    for i in range(num_groups):
+        start_idx = i * group_size
+        end_idx = min((i + 1) * group_size, total_students)
+        
+        if start_idx < total_students:
+            df_shuffled.loc[start_idx:end_idx-1, 'Groupe'] = i + 1
+    
+    return df_shuffled
 
 # =========================
 # LOGOUT
