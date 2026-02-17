@@ -21,6 +21,7 @@
             <a href="{{ url_for('manage_access_code') }}">Code d'accès</a>
             <a href="{{ url_for('admin_planning') }}">Planning temps réel</a>
             <a href="{{ url_for('security') }}">Sécurité</a>
+            <a href="{{ url_for('manage_credentials') }}">Identifiants</a>
             <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
             <a href="{{ url_for('logout') }}">Déconnexion</a>
         </aside>
@@ -32,20 +33,20 @@
             </header>
 
             <main class="dashboard-main">
-                <!-- STATUT DE SÉCURITÉ -->
+                <!-- ÉTAT DE SÉCURITÉ -->
                 <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                     <h3>État de sécurité actuel</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
                         <div style="background: #1a5f8a; padding: 15px; border-radius: 5px; text-align: center;">
-                            <div style="font-size: 24px; color: #4CAF50;">🔒</div>
+                            <div style="font-size: 24px; color: #4CAF50;">Verrouillé</div>
                             <div style="color: #fff; margin-top: 5px;">Connexion sécurisée</div>
                         </div>
                         <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
-                            <div style="font-size: 24px; color: #ff9800;">🔔</div>
-                            <div style="color: #ccc; margin-top: 5px;">Alertes actives</div>
+                            <div style="font-size: 24px; color: #ff9800;">Actif</div>
+                            <div style="color: #ccc; margin-top: 5px;">Alertes activées</div>
                         </div>
                         <div style="background: #444; padding: 15px; border-radius: 5px; text-align: center;">
-                            <div style="font-size: 24px; color: #2196F3;">📱</div>
+                            <div style="font-size: 24px; color: #2196F3;">Disponible</div>
                             <div style="color: #ccc; margin-top: 5px;">Notifications push</div>
                         </div>
                     </div>
@@ -99,22 +100,18 @@
                     </div>
                 </div>
 
-                <!-- STATISTIQUES -->
+                <!-- CONTRÔLE DES ALERTES -->
                 <div style="background: #2a2a2a; padding: 20px; border-radius: 8px;">
-                    <h3>Statistiques de sécurité</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;">
-                        <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: bold; color: #0f4c75;" id="totalAlerts">0</div>
-                            <div style="color: #ccc; margin-top: 5px;">Alertes aujourd'hui</div>
-                        </div>
-                        <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: bold; color: #4CAF50;" id="activeUsers">0</div>
-                            <div style="color: #ccc; margin-top: 5px;">Utilisateurs actifs</div>
-                        </div>
-                        <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: bold; color: #ff9800;" id="pendingAlerts">0</div>
-                            <div style="color: #ccc; margin-top: 5px;">Alertes en attente</div>
-                        </div>
+                    <h3>Contrôle des alertes</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+                        <button onclick="stopAllAlerts()" 
+                                style="background: #d32f2f; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                            Arrêter toutes les alarmes
+                        </button>
+                        <button onclick="clearAlertHistory()" 
+                                style="background: #666; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                            Effacer l'historique
+                        </button>
                     </div>
                 </div>
             </main>
@@ -122,28 +119,38 @@
     </div>
 
     <script>
+        // Variables globales pour les alarmes
+        let activeAlarms = [];
+        let isSidebarCollapsed = true;
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const hamburgerBtn = document.getElementById('hamburgerBtn');
+            
             sidebar.classList.toggle('collapsed');
             hamburgerBtn.classList.toggle('active');
+            isSidebarCollapsed = !isSidebarCollapsed;
         }
         
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById('sidebar');
             const hamburgerBtn = document.getElementById('hamburgerBtn');
-            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
-                if (sidebar.classList.contains('collapsed')) {
-                    toggleSidebar();
-                }
+            
+            // Ne fermer la sidebar que si elle est ouverte et qu'on clique à l'extérieur
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target) && !isSidebarCollapsed) {
+                toggleSidebar();
             }
         });
 
-        // Fonctions de test
+        // Fonctions de test améliorées
         function testSoundAlert() {
             const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
+            audio.loop = true; // Activer la boucle
             audio.play().catch(e => console.error('Erreur audio:', e));
-            addLogEntry('Test alarme sonore', 'success');
+            
+            // Ajouter à la liste des alarmes actives
+            activeAlarms.push(audio);
+            addLogEntry('Test alarme sonore démarré', 'warning');
         }
 
         function testNotification() {
@@ -170,9 +177,11 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Jouer le son
+                    // Jouer le son en boucle
                     const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
+                    audio.loop = true;
                     audio.play();
+                    activeAlarms.push(audio);
                     
                     // Afficher la notification
                     if ('Notification' in window) {
@@ -187,7 +196,7 @@
                         });
                     }
                     
-                    addLogEntry('Test alerte complète', 'success');
+                    addLogEntry('Test alerte complète démarré', 'warning');
                 } else {
                     addLogEntry('Échec test alerte', 'error');
                 }
@@ -196,10 +205,28 @@
             }
         }
 
+        // Fonction pour arrêter toutes les alarmes
+        function stopAllAlerts() {
+            // Arrêter tous les audios actifs
+            activeAlarms.forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.loop = false;
+            });
+            activeAlarms = [];
+            
+            // Fermer toutes les notifications
+            if ('Notification' in window) {
+                Notification.close();
+            }
+            
+            addLogEntry('Toutes les alarmes arrêtées', 'success');
+        }
+
         function addLogEntry(message, type) {
             const logDiv = document.getElementById('alertLog');
             const timestamp = new Date().toLocaleTimeString();
-            const color = type === 'success' ? '#4CAF50' : '#ff4444';
+            const color = type === 'success' ? '#4CAF50' : type === 'error' ? '#ff4444' : '#ff9800';
             
             const entry = document.createElement('div');
             entry.style.cssText = `padding: 8px; margin: 5px 0; background: #333; border-left: 3px solid ${color}; color: #ccc; font-size: 0.9em;`;
@@ -217,14 +244,25 @@
             }
         }
 
+        function clearAlertHistory() {
+            const logDiv = document.getElementById('alertLog');
+            logDiv.innerHTML = '<p style="color: #888;">Historique effacé</p>';
+            addLogEntry('Historique effacé manuellement', 'info');
+        }
+
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
-            addLogEntry('Système de sécurité initialisé', 'info');
+            // S'assurer que la sidebar est bien rétractée au chargement
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
             
-            // Simuler des statistiques
-            document.getElementById('totalAlerts').textContent = Math.floor(Math.random() * 10) + 1;
-            document.getElementById('activeUsers').textContent = Math.floor(Math.random() * 20) + 5;
-            document.getElementById('pendingAlerts').textContent = Math.floor(Math.random() * 3);
+            if (!sidebar.classList.contains('collapsed')) {
+                sidebar.classList.add('collapsed');
+                hamburgerBtn.classList.add('active');
+                isSidebarCollapsed = true;
+            }
+            
+            addLogEntry('Système de sécurité initialisé', 'info');
         });
 
         // Vérifier les alertes améliorées périodiquement
@@ -234,9 +272,14 @@
                 const data = await response.json();
                 
                 if (data.should_alert && document.getElementById('soundAlerts').checked) {
-                    const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
-                    audio.play();
-                    addLogEntry('Alerte déclenchée automatiquement', 'warning');
+                    // Ne jouer l'alarme que si elle n'est pas déjà en cours
+                    if (activeAlarms.length === 0) {
+                        const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
+                        audio.loop = true;
+                        audio.play();
+                        activeAlarms.push(audio);
+                        addLogEntry('Alerte automatique démarrée', 'warning');
+                    }
                 }
             } catch (error) {
                 console.error('Erreur vérification alerte:', error);

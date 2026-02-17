@@ -44,6 +44,45 @@ def charger_alertes():
         print("Erreur chargement alertes :", e)
         return pd.DataFrame(columns=['Noms', 'Prenoms', 'Message', 'Date', 'Type'])
 
+def get_admin_credentials():
+    """Récupérer les identifiants administrateur actuels"""
+    try:
+        if not os.path.exists("admin_credentials.txt"):
+            # Créer le fichier avec les identifiants par défaut
+            default_credentials = {
+                "nom": "IFPB",
+                "prenom": "END"
+            }
+            with open("admin_credentials.txt", "w") as f:
+                json.dump(default_credentials, f)
+            return default_credentials
+        
+        with open("admin_credentials.txt", "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Erreur lecture identifiants admin: {e}")
+        return {"nom": "IFPB", "prenom": "END"}
+
+def set_admin_credentials(nom, prenom):
+    """Définir de nouveaux identifiants administrateur"""
+    try:
+        credentials = {
+            "nom": nom.strip().upper(),
+            "prenom": prenom.strip().upper()
+        }
+        with open("admin_credentials.txt", "w") as f:
+            json.dump(credentials, f)
+        return True
+    except Exception as e:
+        print(f"Erreur écriture identifiants admin: {e}")
+        return False
+
+def verify_admin_credentials(nom, prenom):
+    """Vérifier les identifiants administrateur"""
+    stored = get_admin_credentials()
+    return (nom.strip().upper() == stored["nom"] and 
+            prenom.strip().upper() == stored["prenom"])
+
 def get_access_code():
     """Récupérer le code d'accès actuel"""
     try:
@@ -192,7 +231,7 @@ def login():
         access_code = request.form.get("access_code", "").strip()
 
         # Vérification des identifiants administrateur
-        if nom.upper() == "IFPB" and prenom.upper() == "END":
+        if verify_admin_credentials(nom, prenom):
             session["nom"] = nom
             session["prenom"] = prenom
             session["is_admin"] = True
@@ -675,6 +714,49 @@ def security():
     return render_template("security.html", 
                        nom=session["nom"], 
                        prenom=session["prenom"])
+
+@app.route("/admin/credentials", methods=["GET", "POST"])
+def manage_credentials():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        try:
+            current_nom = request.form.get("current_nom", "").strip()
+            current_prenom = request.form.get("current_prenom", "").strip()
+            new_nom = request.form.get("new_nom", "").strip()
+            new_prenom = request.form.get("new_prenom", "").strip()
+            
+            # Vérifier que les identifiants actuels sont corrects
+            if not verify_admin_credentials(current_nom, current_prenom):
+                return render_template("admin_credentials.html", 
+                                   erreur="Identifiants actuels incorrects",
+                                   current_credentials=get_admin_credentials())
+            
+            # Vérifier que les nouveaux identifiants ne sont pas vides
+            if not new_nom or not new_prenom:
+                return render_template("admin_credentials.html", 
+                                   erreur="Les nouveaux identifiants ne peuvent pas être vides",
+                                   current_credentials=get_admin_credentials())
+            
+            # Mettre à jour les identifiants
+            if set_admin_credentials(new_nom, new_prenom):
+                return render_template("admin_credentials.html", 
+                                   success=True,
+                                   message="Identifiants administrateur mis à jour avec succès",
+                                   current_credentials={"nom": new_nom, "prenom": new_prenom})
+            else:
+                return render_template("admin_credentials.html", 
+                                   erreur="Erreur lors de la mise à jour des identifiants",
+                                   current_credentials=get_admin_credentials())
+                
+        except Exception as e:
+            return render_template("admin_credentials.html", 
+                               erreur=f"Erreur: {str(e)}",
+                               current_credentials=get_admin_credentials())
+    
+    current_credentials = get_admin_credentials()
+    return render_template("admin_credentials.html", current_credentials=current_credentials)
 
 @app.route("/admin/manage_students", methods=["GET", "POST"])
 def manage_students():

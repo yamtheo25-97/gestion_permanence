@@ -126,54 +126,73 @@
             </div>
 
             <!-- SCRIPT -->
+            <script src="{{ url_for('static', filename='sidebar-control.js') }}"></script>
+            <script src="{{ url_for('static', filename='enhanced-alerts.js') }}"></script>
             <script>
                 let alertActive = false;
-                const audioEl = document.getElementById('alarmeAudio');
-                // stop alarm
-                function stopAlarm(){
-                    try{
-                        // Arrêter l'audio principal
-                        if (audioEl){ 
-                            audioEl.pause(); 
-                            audioEl.currentTime = 0; 
-                        }
-                    }catch(e){/*ignore*/}
+                let audioEl = null;
+
+                // Initialiser le système d'alarmes amélioré
+                document.addEventListener('DOMContentLoaded', function() {
+                    // S'assurer que la sidebar est rétractée
+                    if (window.sidebarController) {
+                        window.sidebarController.forceCollapse();
+                    }
                     
-                    // Arrêter le fallback WebAudio
-                    try{
-                        stopFallback();
-                    }catch(e){/*ignore*/}
+                    // Initialiser l'audio
+                    try {
+                        audioEl = new Audio("{{ url_for('static', filename='alarm.wav') }}");
+                        audioEl.loop = true;
+                    } catch (e) {
+                        console.warn('Audio non initialisé:', e);
+                    }
+
+                    console.log('Dashboard initialisé avec système d\'alarmes amélioré');
+                });
+
+                // Fonctions d'alarme améliorées
+                function playAlarm() {
+                    if (audioEl && !alertActive) {
+                        audioEl.play().catch(e => console.error('Erreur lecture audio:', e));
+                        alertActive = true;
+                    }
+                }
+
+                function stopAlarm() {
+                    try {
+                        if (audioEl) {
+                            audioEl.pause();
+                            audioEl.currentTime = 0;
+                        }
+                    } catch (e) {
+                        console.warn('Erreur arrêt audio:', e);
+                    }
                     
                     alertActive = false;
+                    
+                    // Fermer la modal d'alerte
                     const modal = document.getElementById('alertModal');
                     if (modal) modal.style.display = 'none';
                 }
 
-                // Play alarm with fallback to WebAudio
-                function playAlarm(){
-                    if (audioEl){
-                        audioEl.loop = true;
-                        audioEl.play().catch(()=>{
-                            // fallback: simple beep
-                            try{ window.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-                                const o = window.audioCtx.createOscillator();
-                                const g = window.audioCtx.createGain();
-                                o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.05;
-                                o.connect(g); g.connect(window.audioCtx.destination); o.start(); window._osc = o; window._gain=g;
-                            }catch(e){}
+                // Fonction pour arrêter toutes les alarmes (bouton global)
+                function stopAllAlarms() {
+                    stopAlarm();
+                    
+                    // Afficher une notification de confirmation
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('Alarmes arrêtées', {
+                            body: 'Toutes les alarmes ont été arrêtées manuellement',
+                            icon: "{{ url_for('static', filename='logo_douanes.png') }}",
+                            silent: true
                         });
-                    }else{
-                        try{ window.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-                            const o = window.audioCtx.createOscillator();
-                            const g = window.audioCtx.createGain();
-                            o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.05;
-                            o.connect(g); g.connect(window.audioCtx.destination); o.start(); window._osc = o; window._gain=g;
-                        }catch(e){}
                     }
                 }
-                function stopFallback(){ if(window._osc){ try{window._osc.stop(); window._osc.disconnect(); window._gain.disconnect(); }catch(e){} window._osc=null; window._gain=null;} }
 
-                async function showAlert(slot){
+                // Améliorer la fonction showAlert existante
+                async function showAlert(slot) {
+                    if (alertActive) return; // Éviter les doublons
+                    
                     alertActive = true;
                     const modal = document.getElementById('alertModal');
                     if (!modal) return;
@@ -181,10 +200,7 @@
                     // Récupérer le nom de l'utilisateur connecté
                     const userName = "{{ prenom }} {{ nom }}".trim();
                     
-                    // build members by guérite
-                    const byG = {};
-                    (slot.members||[]).forEach(m=>{ byG[m.guerite] = byG[m.guerite] || []; byG[m.guerite].push(m); });
-                    
+                    // Construire le message d'alerte
                     let html = `<h2>ALERTE — VOTRE SERVICE DANS 30 MIN</h2>`;
                     html += `<p><strong>${userName}</strong> - Groupe ${slot.group}<br>${slot.display}</p>`;
                     
@@ -192,11 +208,10 @@
                     let userGuerite = null;
                     let userIsService = false;
                     
-                    for (const [guerite, members] of Object.entries(byG)) {
-                        const userInGuerite = members.find(m => m.name.toLowerCase() === userName.toLowerCase());
-                        if (userInGuerite) {
-                            userGuerite = guerite;
-                            userIsService = userInGuerite.service;
+                    for (const member of (slot.members || [])) {
+                        if (member.name.toLowerCase() === userName.toLowerCase()) {
+                            userGuerite = member.guerite;
+                            userIsService = member.service;
                             break;
                         }
                     }
@@ -210,80 +225,67 @@
                         html += `</div>`;
                     }
                     
-                    html += `<button class="stop-alarm-btn" onclick="stopAlarm(); stopFallback();">Couper l'alarme</button>`;
+                    html += `<div style="display: flex; gap: 10px; margin-top: 15px;">`;
+                    html += `<button class="stop-alarm-btn" onclick="stopAlarm();">Arrêter l'alarme</button>`;
+                    html += `<button class="stop-all-alarms-btn" onclick="stopAllAlarms();" style="background: #666; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">Tout arrêter</button>`;
+                    html += `</div>`;
+                    
                     document.getElementById('alertContent').innerHTML = html;
                     modal.style.display = 'block';
+                    
+                    // Jouer l'alarme en boucle
                     playAlarm();
                 }
 
-                // Vérifier si alerte 30min
-                async function checkAlert(){
-                    try{
-                        const res = await fetch("{{ url_for('alert_check') }}");
-                        const data = await res.json();
-                        if (data.should_alert && !alertActive){
-                            console.log('ALERTE DÉTECTÉE - Lancement de l\'alarme');
-                            await showAlert(data.slot);
+                // Vérification des alertes améliorée
+                async function checkAlerts() {
+                    try {
+                        const response = await fetch('/enhanced-alert-check');
+                        const data = await response.json();
+                        
+                        if (data.should_alert && !alertActive) {
+                            showAlert(data.upcoming_alerts[0].slot);
                         }
-                    }catch(e){
-                        console.error('Erreur lors de la vérification d\'alerte:', e);
+                    } catch (error) {
+                        console.error('Erreur vérification alertes:', error);
                     }
                 }
 
-                // Forcer la vérification immédiate au chargement
-                async function forceCheckAlert(){
-                    console.log('Vérification forcée des alertes...');
-                    await checkAlert();
+                // Démarrer la vérification périodique
+                setInterval(checkAlerts, 30000); // 30 secondes
+
+                // Vérification initiale
+                setTimeout(checkAlerts, 2000);
+
+                // Fonctions pour la rotation des guérites
+                function loadShiftInfo() {
+                    fetch("{{ url_for('current_shift') }}")
+                        .then(res => res.json())
+                        .then(data => {
+                            if (!data || !data.group) {
+                                document.getElementById('shiftDetails').innerHTML = 'Aucun créneau disponible';
+                                return;
+                            }
+                            let html = `<strong>Groupe ${data.group}</strong><br>`;
+                            html += `${data.display}<br><br>`;
+                            const byGuerite = {};
+                            (data.members || []).forEach(m => { 
+                                if (!byGuerite[m.guerite]) byGuerite[m.guerite] = []; 
+                                byGuerite[m.guerite].push(m.name); 
+                            });
+                            Object.keys(byGuerite).sort().forEach(g => { 
+                                const isService = (g === data.guerite_service); 
+                                const style = isService ? 'style="color:#0f0"' : ''; 
+                                html += `<div ${style}><strong>${g}</strong>: ${byGuerite[g].join(', ')}</div>`; 
+                            });
+                            document.getElementById('shiftDetails').innerHTML = html;
+                        })
+                        .catch(err => console.error(err));
                 }
 
-                // Charger infos rotation
-                async function loadShiftInfo(){
-                    try {
-                        const res = await fetch("{{ url_for('current_shift') }}");
-                        const data = await res.json();
-                        if (!data || !data.group) {
-                            document.getElementById('shiftDetails').innerHTML = 'Aucun créneau disponible';
-                            return;
-                        }
-                        let html = `<strong>Groupe ${data.group}</strong><br>`;
-                        html += `${data.display}<br><br>`;
-                        const byGuerite = {};
-                        (data.members || []).forEach(m => { if (!byGuerite[m.guerite]) byGuerite[m.guerite]=[]; byGuerite[m.guerite].push(m.name); });
-                        Object.keys(byGuerite).sort().forEach(g => { const isService = (g===data.guerite_service); const style = isService? 'style="color:#0f0"':''; html += `<div ${style}><strong>${g}</strong>: ${byGuerite[g].join(', ')}</div>`; });
-                        document.getElementById('shiftDetails').innerHTML = html;
-                    } catch(err) { console.error(err); }
-                }
-
-                // init
+                // Initialisation
                 loadShiftInfo(); 
                 setInterval(loadShiftInfo, 30000);
-                
-                // Vérification des alertes : immédiate puis toutes les 30 secondes
-                forceCheckAlert(); 
-                setInterval(checkAlert, 30000);
-            </script>
-            
-            <script>
-                // Fonction pour basculer la sidebar
-                function toggleSidebar() {
-                    const sidebar = document.getElementById('sidebar');
-                    const hamburgerBtn = document.getElementById('hamburgerBtn');
-                    
-                    sidebar.classList.toggle('collapsed');
-                    hamburgerBtn.classList.toggle('active');
-                }
-                
-                // Fermer la sidebar en cliquant à l'extérieur
-                document.addEventListener('click', function(event) {
-                    const sidebar = document.getElementById('sidebar');
-                    const hamburgerBtn = document.getElementById('hamburgerBtn');
-                    
-                    if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
-                        if (sidebar.classList.contains('collapsed')) {
-                            toggleSidebar();
-                        }
-                    }
-                });
             </script>
         </div>
     </div>
