@@ -17,3 +17,4 @@ function arreterAlerte() {
     alerteActive = false;
     document.getElementById("btnStop").style.display = "none";
 }
+ 
