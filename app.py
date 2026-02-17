@@ -47,20 +47,32 @@ def charger_alertes():
 def get_access_code():
     """Récupérer le code d'accès actuel"""
     try:
+        if not os.path.exists("access_code.txt"):
+            return None
         with open("access_code.txt", "r") as f:
-            return f.read().strip()
-    except FileNotFoundError:
+            code = f.read().strip()
+            return code if code else None
+    except Exception as e:
+        print(f"Erreur lecture code d'accès: {e}")
         return None
 
 def set_access_code(code):
     """Définir le code d'accès"""
-    with open("access_code.txt", "w") as f:
-        f.write(code if code else "")
+    try:
+        if code and code.strip():
+            with open("access_code.txt", "w") as f:
+                f.write(code.strip())
+        else:
+            # Si le code est vide, supprimer le fichier
+            if os.path.exists("access_code.txt"):
+                os.remove("access_code.txt")
+    except Exception as e:
+        print(f"Erreur écriture code d'accès: {e}")
 
 def verify_access_code(code):
     """Vérifier si le code d'accès est correct"""
     stored_code = get_access_code()
-    if not stored_code:  # Pas de code défini
+    if stored_code is None:  # Pas de code défini
         return True
     return code == stored_code
 
@@ -335,6 +347,92 @@ def alert_check():
 
     return jsonify({'should_alert': False})
 
+@app.route("/enhanced-alert-check")
+def enhanced_alert_check():
+    """Route améliorée pour les alertes avec support de notifications push"""
+    if "nom" not in session or "prenom" not in session:
+        return jsonify({
+            'should_alert': False, 
+            'user_logged_in': False,
+            'message': 'Utilisateur non connecté'
+        })
+    
+    now = datetime.now()
+    schedule = generate_schedule(START_DATE, days=30)
+    
+    # Nom complet de l'utilisateur connecté
+    user_name = f"{session['prenom']} {session['nom']}".strip().lower()
+    
+    # Vérifier les alertes dans les 60 prochaines minutes
+    upcoming_alerts = []
+    
+    for slot in schedule:
+        slot_start = datetime.fromisoformat(slot['iso'])
+        alert_time = slot_start - timedelta(minutes=30)
+        
+        # Vérifier si l'alerte est dans la prochaine heure
+        if alert_time <= now < (alert_time + timedelta(minutes=60)):
+            # Vérifier si l'utilisateur connecté est dans ce créneau
+            for member in slot.get('members', []):
+                if member['name'].strip().lower() == user_name:
+                    upcoming_alerts.append({
+                        'slot': slot,
+                        'alert_time': alert_time.isoformat(),
+                        'minutes_until': int((alert_time - now).total_seconds() / 60),
+                        'is_immediate': alert_time <= now <= (alert_time + timedelta(seconds=60))
+                    })
+                    break
+    
+    # Trier par temps jusqu'à l'alerte
+    upcoming_alerts.sort(key=lambda x: x['minutes_until'])
+    
+    return jsonify({
+        'should_alert': len([a for a in upcoming_alerts if a['is_immediate']]) > 0,
+        'user_logged_in': True,
+        'user_name': session['prenom'] + ' ' + session['nom'],
+        'upcoming_alerts': upcoming_alerts[:3],  # Limiter à 3 prochaines alertes
+        'current_time': now.isoformat(),
+        'notification_enabled': True
+    })
+
+@app.route("/register-device", methods=["POST"])
+def register_device():
+    """Enregistrer un appareil pour les notifications push"""
+    if "nom" not in session or "prenom" not in session:
+        return jsonify({'success': False, 'message': 'Non authentifié'})
+    
+    try:
+        device_token = request.json.get('device_token')
+        user_name = f"{session['prenom']} {session['nom']}".strip()
+        
+        # Ici vous pourriez sauvegarder le token dans une base de données
+        # Pour l'instant, on simule l'enregistrement
+        print(f"Appareil enregistré pour {user_name}: {device_token}")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Appareil enregistré avec succès',
+            'user_name': user_name
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'message': f'Erreur: {str(e)}'
+        })
+
+@app.route("/test-notification")
+def test_notification():
+    """Route pour tester les notifications"""
+    if "nom" not in session or "prenom" not in session:
+        return jsonify({'success': False, 'message': 'Non authentifié'})
+    
+    return jsonify({
+        'success': True,
+        'message': 'Notification de test envoyée',
+        'user_name': session['prenom'] + ' ' + session['nom'],
+        'timestamp': datetime.now().isoformat()
+    })
+
 
 # =========================
 # ADMINISTRATION
@@ -519,11 +617,18 @@ def manage_access_code():
                                    message=message)
             
             elif action == "remove_code":
-                set_access_code("")
-                return render_template("access_code.html", 
-                                   success=True,
-                                   current_code="",
-                                   message="Code d'accès supprimé. Accès libre activé.")
+                # Supprimer le fichier de code pour activer l'accès libre
+                try:
+                    if os.path.exists("access_code.txt"):
+                        os.remove("access_code.txt")
+                    message = "Code d'accès supprimé. Accès libre activé."
+                    return render_template("access_code.html", 
+                                       success=True,
+                                       current_code="",
+                                       message=message)
+                except Exception as e:
+                    return render_template("access_code.html", 
+                                       erreur=f"Erreur lors de la suppression du code: {str(e)}")
                     
         except Exception as e:
             return render_template("access_code.html", erreur=str(e))
@@ -561,6 +666,15 @@ def admin_planning():
                        schedule=schedule,
                        current_shift=current_shift,
                        next_shifts=next_shifts)
+
+@app.route("/admin/security")
+def security():
+    if not session.get("is_admin", False):
+        return redirect(url_for("login"))
+    
+    return render_template("security.html", 
+                       nom=session["nom"], 
+                       prenom=session["prenom"])
 
 @app.route("/admin/manage_students", methods=["GET", "POST"])
 def manage_students():

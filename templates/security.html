@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Sécurité - Administration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="dashboard-body">
+    <div class="app-shell">
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+            <span></span><span></span><span></span>
+        </button>
+
+        <aside class="sidebar collapsed" id="sidebar">
+            <h3>Administration</h3>
+            <a href="{{ url_for('admin') }}">Gestion des personnes</a>
+            <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
+            <a href="{{ url_for('manage_groups') }}">Gestion des groupes</a>
+            <a href="{{ url_for('manage_students') }}">Gestion des élèves</a>
+            <a href="{{ url_for('manage_access_code') }}">Code d'accès</a>
+            <a href="{{ url_for('admin_planning') }}">Planning temps réel</a>
+            <a href="{{ url_for('security') }}">Sécurité</a>
+            <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
+        </aside>
+
+        <div class="main-content">
+            <header class="dashboard-header">
+                <h1>Sécurité et Notifications</h1>
+                <p>Connecté en tant que <strong>{{ prenom }} {{ nom }}</strong> (Administrateur)</p>
+            </header>
+
+            <main class="dashboard-main">
+                <!-- STATUT DE SÉCURITÉ -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>État de sécurité actuel</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <div style="background: #1a5f8a; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 24px; color: #4CAF50;">🔒</div>
+                            <div style="color: #fff; margin-top: 5px;">Connexion sécurisée</div>
+                        </div>
+                        <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 24px; color: #ff9800;">🔔</div>
+                            <div style="color: #ccc; margin-top: 5px;">Alertes actives</div>
+                        </div>
+                        <div style="background: #444; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 24px; color: #2196F3;">📱</div>
+                            <div style="color: #ccc; margin-top: 5px;">Notifications push</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONFIGURATION DES ALERTES -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Configuration des alertes</h3>
+                    <div style="margin-top: 15px;">
+                        <label style="display: flex; align-items: center; color: #ccc; margin-bottom: 10px;">
+                            <input type="checkbox" id="soundAlerts" checked style="margin-right: 10px;">
+                            Activer les alertes sonores
+                        </label>
+                        <label style="display: flex; align-items: center; color: #ccc; margin-bottom: 10px;">
+                            <input type="checkbox" id="pushNotifications" checked style="margin-right: 10px;">
+                            Activer les notifications push
+                        </label>
+                        <label style="display: flex; align-items: center; color: #ccc; margin-bottom: 10px;">
+                            <input type="checkbox" id="emailAlerts" style="margin-right: 10px;">
+                            Activer les alertes par email
+                        </label>
+                    </div>
+                </div>
+
+                <!-- TEST DES ALERTES -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Tester les alertes</h3>
+                    <p style="color: #ccc; margin-bottom: 15px;">Testez le système d'alerte pour vous assurer qu'il fonctionne correctement.</p>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="testSoundAlert()" 
+                                style="background: #0f4c75; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                            Tester l'alarme sonore
+                        </button>
+                        <button onclick="testNotification()" 
+                                style="background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                            Tester la notification
+                        </button>
+                        <button onclick="testEnhancedAlert()" 
+                                style="background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                            Tester l'alerte complète
+                        </button>
+                    </div>
+                </div>
+
+                <!-- JOURNAL DES ALERTES -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Journal des alertes récentes</h3>
+                    <div id="alertLog" style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
+                        <p style="color: #888;">Chargement du journal...</p>
+                    </div>
+                </div>
+
+                <!-- STATISTIQUES -->
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px;">
+                    <h3>Statistiques de sécurité</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: bold; color: #0f4c75;" id="totalAlerts">0</div>
+                            <div style="color: #ccc; margin-top: 5px;">Alertes aujourd'hui</div>
+                        </div>
+                        <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: bold; color: #4CAF50;" id="activeUsers">0</div>
+                            <div style="color: #ccc; margin-top: 5px;">Utilisateurs actifs</div>
+                        </div>
+                        <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: bold; color: #ff9800;" id="pendingAlerts">0</div>
+                            <div style="color: #ccc; margin-top: 5px;">Alertes en attente</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            sidebar.classList.toggle('collapsed');
+            hamburgerBtn.classList.toggle('active');
+        }
+        
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
+
+        // Fonctions de test
+        function testSoundAlert() {
+            const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
+            audio.play().catch(e => console.error('Erreur audio:', e));
+            addLogEntry('Test alarme sonore', 'success');
+        }
+
+        function testNotification() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification('Test de notification', {
+                            body: 'Ceci est un test du système de notification',
+                            icon: '{{ url_for("static", filename="logo_douanes.png") }}'
+                        });
+                        addLogEntry('Test notification push', 'success');
+                    } else {
+                        addLogEntry('Permission notification refusée', 'error');
+                    }
+                });
+            } else {
+                addLogEntry('Notifications non supportées', 'error');
+            }
+        }
+
+        async function testEnhancedAlert() {
+            try {
+                const response = await fetch('/test-notification');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Jouer le son
+                    const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
+                    audio.play();
+                    
+                    // Afficher la notification
+                    if ('Notification' in window) {
+                        Notification.requestPermission().then(permission => {
+                            if (permission === 'granted') {
+                                new Notification('ALERTE DE TEST', {
+                                    body: `Test pour ${data.user_name}`,
+                                    icon: '{{ url_for("static", filename="logo_douanes.png") }}',
+                                    requireInteraction: true
+                                });
+                            }
+                        });
+                    }
+                    
+                    addLogEntry('Test alerte complète', 'success');
+                } else {
+                    addLogEntry('Échec test alerte', 'error');
+                }
+            } catch (error) {
+                addLogEntry(`Erreur: ${error.message}`, 'error');
+            }
+        }
+
+        function addLogEntry(message, type) {
+            const logDiv = document.getElementById('alertLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'success' ? '#4CAF50' : '#ff4444';
+            
+            const entry = document.createElement('div');
+            entry.style.cssText = `padding: 8px; margin: 5px 0; background: #333; border-left: 3px solid ${color}; color: #ccc; font-size: 0.9em;`;
+            entry.innerHTML = `<strong>${timestamp}</strong> - ${message}`;
+            
+            if (logDiv.children.length === 1 && logDiv.children[0].textContent === 'Chargement du journal...') {
+                logDiv.innerHTML = '';
+            }
+            
+            logDiv.insertBefore(entry, logDiv.firstChild);
+            
+            // Limiter à 20 entrées
+            while (logDiv.children.length > 20) {
+                logDiv.removeChild(logDiv.lastChild);
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            addLogEntry('Système de sécurité initialisé', 'info');
+            
+            // Simuler des statistiques
+            document.getElementById('totalAlerts').textContent = Math.floor(Math.random() * 10) + 1;
+            document.getElementById('activeUsers').textContent = Math.floor(Math.random() * 20) + 5;
+            document.getElementById('pendingAlerts').textContent = Math.floor(Math.random() * 3);
+        });
+
+        // Vérifier les alertes améliorées périodiquement
+        setInterval(async function() {
+            try {
+                const response = await fetch('/enhanced-alert-check');
+                const data = await response.json();
+                
+                if (data.should_alert && document.getElementById('soundAlerts').checked) {
+                    const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
+                    audio.play();
+                    addLogEntry('Alerte déclenchée automatiquement', 'warning');
+                }
+            } catch (error) {
+                console.error('Erreur vérification alerte:', error);
+            }
+        }, 30000); // Vérifier toutes les 30 secondes
+    </script>
+</body>
+</html>
