@@ -120,7 +120,7 @@ def verify_access_code(code):
 # GÉNÉRATION DU PLANNING
 # =========================
 
-def generate_schedule(start_dt, days=30):
+def generate_schedule(start_dt, days=30, slot_duration=2):
     df = charger_eleves()
     if df.empty:
         return []
@@ -166,8 +166,16 @@ def generate_schedule(start_dt, days=30):
 
     for day in range(days):
         current_date = start_dt + timedelta(days=day)
-
-        for hour in range(6, 18, 2):
+        
+        # Calculer le nombre de créneaux par jour en fonction de la durée
+        daily_slots = 24 // slot_duration  # 24h divisé par la durée
+        
+        for slot_idx in range(daily_slots):
+            hour = 6 + (slot_idx * slot_duration)  # Commence à 6h
+            
+            if hour >= 24:  # Ne pas dépasser minuit
+                break
+                
             slot_time = current_date.replace(hour=hour, minute=0)
 
             group_index = (slot_index + GROUP_START_OFFSET) % len(group_ids)
@@ -180,7 +188,7 @@ def generate_schedule(start_dt, days=30):
                 guerite_service = 'Nord'
             else:
                 guerite_service = 'Sud'
-
+            
             all_members = []
 
             for g in guerites_in_group:
@@ -202,7 +210,7 @@ def generate_schedule(start_dt, days=30):
                         'service': (current_guerite == guerite_service)
                     })
 
-            end_time = slot_time + timedelta(hours=2)
+            end_time = slot_time + timedelta(hours=slot_duration)
 
             schedule.append({
                 'iso': slot_time.isoformat(),
@@ -559,21 +567,40 @@ def update_hours():
     
     if request.method == "POST":
         try:
-            # Mettre à jour les heures dans le fichier de configuration
+            # Récupérer les nouvelles valeurs
             start_hour = int(request.form["start_hour"])
             end_hour = int(request.form["end_hour"])
             alert_minutes = int(request.form["alert_minutes"])
+            slot_duration = int(request.form.get("slot_duration", 2))  # Durée par défaut: 2 heures
+            
+            # Sauvegarder les paramètres dans un fichier
+            params = {
+                'start_hour': start_hour,
+                'end_hour': end_hour,
+                'alert_minutes': alert_minutes,
+                'slot_duration': slot_duration
+            }
+            
+            with open('schedule_params.json', 'w') as f:
+                json.dump(params, f, indent=2)
             
             # Pour l'instant, on affiche les valeurs (à intégrer dans la logique)
             return render_template("update_hours.html", 
                                success=True,
                                start_hour=start_hour,
                                end_hour=end_hour,
-                               alert_minutes=alert_minutes)
+                               alert_minutes=alert_minutes,
+                               slot_duration=slot_duration)
         except Exception as e:
             return render_template("update_hours.html", erreur=str(e))
     
-    return render_template("update_hours.html")
+    # Afficher les paramètres actuels
+    params = get_schedule_params()
+    return render_template("update_hours.html", 
+                               start_hour=params['start_hour'],
+                               end_hour=params['end_hour'],
+                               alert_minutes=params['alert_minutes'],
+                               slot_duration=params['slot_duration'])
 
 @app.route("/admin/manage_groups", methods=["GET", "POST"])
 def manage_groups():
@@ -850,6 +877,107 @@ def organize_random_groups(df, group_size=None):
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+# =========================
+# CONTEXT PROCESSOR GLOBAL
+# =========================
+
+def get_schedule_params():
+    """Récupérer les paramètres de planning depuis les fichiers de configuration"""
+    try:
+        # Valeurs par défaut
+        default_params = {
+            'start_hour': 6,
+            'end_hour': 18,
+            'alert_minutes': 30,
+            'slot_duration': 2
+        }
+        
+        # Essayer de lire les paramètres depuis un fichier de configuration
+        if os.path.exists('schedule_params.json'):
+            with open('schedule_params.json', 'r') as f:
+                params = json.load(f)
+                # Fusionner avec les valeurs par défaut
+                return {**default_params, **params}
+        
+        return default_params
+    except Exception as e:
+        print(f"Erreur lecture paramètres: {e}")
+        return {
+            'start_hour': 6,
+            'end_hour': 18,
+            'alert_minutes': 30,
+            'slot_duration': 2
+        }
+
+@app.context_processor
+def inject_rotation_data():
+    """Injecter les données de rotation dans toutes les templates"""
+    try:
+        # Récupérer les paramètres actuels
+        params = get_schedule_params()
+        
+        # Récupérer le groupe actuel et les membres
+        schedule = generate_schedule(START_DATE, days=1, slot_duration=params['slot_duration'])
+        
+        if schedule:
+            current_slot = schedule[0]  # Premier créneau du jour
+            current_group = current_slot.get('group', 1)
+            current_time = current_slot.get('display', 'Inconnu')
+            guerite_service = current_slot.get('guerite_service', 'Inconnue')
+            members = current_slot.get('members', [])
+            
+            # Organiser les membres par guérite
+            members_by_guerite = {}
+            for member in members:
+                guerite = member.get('guerite', 'Non assigné')
+                if guerite not in members_by_guerite:
+                    members_by_guerite[guerite] = []
+                members_by_guerite[guerite].append(member.get('name', 'Inconnu'))
+            
+            return {
+                'current_group': current_group,
+                'current_time': current_time,
+                'guerite_service': guerite_service,
+                'members_by_guerite': members_by_guerite,
+                'rotation_info': {
+                    'group': current_group,
+                    'time': current_time,
+                    'guerite': guerite_service,
+                    'members': members_by_guerite
+                },
+                'schedule_params': params
+            }
+        else:
+            return {
+                'current_group': 1,
+                'current_time': 'Chargement...',
+                'guerite_service': 'Inconnue',
+                'members_by_guerite': {},
+                'rotation_info': {
+                    'group': 1,
+                    'time': 'Chargement...',
+                    'guerite': 'Inconnue',
+                    'members': {}
+                },
+                'schedule_params': params
+            }
+    except Exception as e:
+        print(f"Erreur context processor: {e}")
+        return {
+            'current_group': 1,
+            'current_time': 'Erreur',
+            'guerite_service': 'Erreur',
+            'members_by_guerite': {},
+            'rotation_info': {
+                'group': 1,
+                'time': 'Erreur',
+                'guerite': 'Erreur',
+                'members': {}
+            },
+            'schedule_params': get_schedule_params()
+        }
 
 
 # =========================

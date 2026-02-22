@@ -4,35 +4,211 @@
     <meta charset="UTF-8">
     <title>Programme de permanence</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* NOUVEAU SYSTÈME DE NAVIGATION - INDÉPENDANT */
+        .sidebar-neuf {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+            border-right: 2px solid #444;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 9999;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+        }
+
+        .sidebar-neuf.sidebar-active {
+            transform: translateX(0);
+        }
+
+        .btn-menu-neuf {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10000;
+            background: linear-gradient(135deg, #2a2a2a, #3a3a3a);
+            border: 2px solid #666;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 35px;
+            height: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-menu-neuf:hover {
+            background: linear-gradient(135deg, #3a3a3a, #4a4a4a);
+            border-color: #888;
+            transform: scale(1.05);
+        }
+
+        .btn-menu-neuf span {
+            display: block;
+            height: 3px;
+            background: #fff;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-fermer-sidebar {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 30px;
+            height: 30px;
+            background: #d32f2f;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .btn-fermer-sidebar:hover {
+            background: #b71c1c;
+            transform: scale(1.1);
+        }
+
+        .main-content-neuf {
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+            flex: 1;
+        }
+
+        .sidebar-neuf.sidebar-active ~ .main-content-neuf {
+            margin-left: 280px;
+        }
+
+        .sidebar-neuf h3 {
+            color: #fff;
+            padding: 20px;
+            margin: 0;
+            font-size: 18px;
+            border-bottom: 1px solid #444;
+        }
+
+        .sidebar-neuf a {
+            display: block;
+            color: #eee;
+            padding: 15px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 8px 15px;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .sidebar-neuf a:hover {
+            background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+            transform: translateX(5px);
+            color: #fff;
+        }
+
+        .sidebar-neuf a:first-child {
+            background: linear-gradient(135deg, #0f4c75, #1a5f8a);
+            color: #fff;
+        }
+
+        .sidebar-neuf a:last-child {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+            color: #fff;
+        }
+
+        .rotation-section {
+            padding: 15px;
+            border-top: 1px solid #444;
+            margin-top: 20px;
+        }
+
+        .rotation-section h3 {
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .shift-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .shift-btn:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+
+        .shift-details {
+            margin-top: 10px;
+            font-size: 0.85em;
+            padding: 10px;
+            background: #242424;
+            border-radius: 4px;
+            color: #ccc;
+            line-height: 1.4;
+        }
+    </style>
 </head>
 
 <body class="dashboard-body">
 
     <div class="app-shell">
-        <!-- BOUTON HAMBURGER -->
-        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+        <!-- NOUVEAU BOUTON MENU -->
+        <button class="btn-menu-neuf" id="btn-menu-neuf">
             <span></span>
             <span></span>
             <span></span>
         </button>
 
-        <aside class="sidebar collapsed" id="sidebar">
+        <!-- NOUVELLE SIDEBAR -->
+        <aside class="sidebar-neuf" id="sidebar-neuf">
+            <!-- BOUTON DE FERMETURE -->
+            <button class="btn-fermer-sidebar" id="btn-fermer-sidebar">×</button>
+            
             <h3>Navigation</h3>
             <a href="{{ url_for('dashboard') }}">Tableau de bord</a>
             <a href="{{ url_for('menu') }}">Planning</a>
             <a href="{{ url_for('logout') }}">Déconnexion</a>
             
-            <hr style="margin:15px 0; border: none; border-top: 1px solid #444;">
-            
-            <h3>Rotation </h3>
-            <div id="rotationInfo">
-                <button class="shift-btn" data-guerite="Nord">Nord</button>
-                <button class="shift-btn" data-guerite="Sud">Sud</button>
+            <div class="rotation-section">
+                <h3>Rotation</h3>
+                <div id="rotationInfo">
+                    <button class="shift-btn" data-guerite="Nord">Nord</button>
+                    <button class="shift-btn" data-guerite="Sud">Sud</button>
+                </div>
+                <div class="shift-details">
+                    Groupe {{ rotation_info.group }} - {{ rotation_info.time }}<br>
+                    Guérite service: {{ rotation_info.guerite }}<br>
+                    {% if rotation_info.members.Nord %}
+                        Nord: {{ rotation_info.members.Nord|join(', ') }}<br>
+                    {% endif %}
+                    {% if rotation_info.members.Sud %}
+                        Sud: {{ rotation_info.members.Sud|join(', ') }}
+                    {% endif %}
+                </div>
             </div>
-            <div id="shiftDetails" style="margin-top:10px; font-size:0.85em; padding:8px; background:#242424; border-radius:4px;">Chargement...</div>
         </aside>
 
-        <div class="main-content">
+        <div class="main-content-neuf">
             <!-- HEADER -->
             <header class="dashboard-header">
                 <h1>Programme de permanence — Tableau de bord</h1>
@@ -126,73 +302,76 @@
             </div>
 
             <!-- SCRIPT -->
-            <script src="{{ url_for('static', filename='sidebar-control.js') }}"></script>
-            <script src="{{ url_for('static', filename='enhanced-alerts.js') }}"></script>
             <script>
+                // NOUVEAU SYSTÈME DE NAVIGATION - ISOLÉ ET ROBUSTE
+                
+                // Attendre que le DOM soit chargé
+                document.addEventListener('DOMContentLoaded', function() {
+                    
+                    // Récupérer les éléments
+                    const btnMenu = document.getElementById('btn-menu-neuf');
+                    const btnFermer = document.getElementById('btn-fermer-sidebar');
+                    const sidebar = document.getElementById('sidebar-neuf');
+                    
+                    // Vérifier que les éléments existent
+                    if (!btnMenu || !btnFermer || !sidebar) {
+                        console.error('Éléments de navigation non trouvés');
+                        return;
+                    }
+                    
+                    // FONCTION POUR OUVRIR LA SIDEBAR
+                    function ouvrirSidebar() {
+                        sidebar.classList.add('sidebar-active');
+                        console.log('Sidebar ouverte');
+                    }
+                    
+                    // FONCTION POUR FERMER LA SIDEBAR
+                    function fermerSidebar() {
+                        sidebar.classList.remove('sidebar-active');
+                        console.log('Sidebar fermée');
+                    }
+                    
+                    // ÉVÉNEMENTS
+                    // Bouton menu - OUVRIR la sidebar
+                    btnMenu.addEventListener('click', function(event) {
+                        event.stopPropagation(); // Empêcher la propagation
+                        console.log('Clic sur bouton menu');
+                        ouvrirSidebar();
+                    });
+                    
+                    // Bouton fermer - FERMER la sidebar
+                    btnFermer.addEventListener('click', function(event) {
+                        event.stopPropagation(); // Empêcher la propagation
+                        console.log('Clic sur bouton fermer');
+                        fermerSidebar();
+                    });
+                    
+                    // INTERDICTION FORMELLE : Pas d'ouverture automatique
+                    // AUCUN événement sur le body ou le document pour ouvrir la sidebar
+                    
+                    // Empêcher les clics dans la sidebar de se propager
+                    sidebar.addEventListener('click', function(event) {
+                        event.stopPropagation();
+                    });
+                    
+                    console.log('Système de navigation initialisé avec succès');
+                });
+                
+                // SYSTÈME D'ALERTES (conservé)
                 let alertActive = false;
                 let audioEl = null;
+                let audioContext = null;
+                let currentNotifications = [];
 
-                // Initialiser le système d'alarmes amélioré
-                document.addEventListener('DOMContentLoaded', function() {
-                    // S'assurer que la sidebar est rétractée
-                    if (window.sidebarController) {
-                        window.sidebarController.forceCollapse();
-                    }
-                    
-                    // Initialiser l'audio
-                    try {
-                        audioEl = new Audio("{{ url_for('static', filename='alarm.wav') }}");
-                        audioEl.loop = true;
-                    } catch (e) {
-                        console.warn('Audio non initialisé:', e);
-                    }
-
-                    console.log('Dashboard initialisé avec système d\'alarmes amélioré');
-                });
-
-                // Fonctions d'alarme améliorées
-                function playAlarm() {
-                    if (audioEl && !alertActive) {
-                        audioEl.play().catch(e => console.error('Erreur lecture audio:', e));
-                        alertActive = true;
-                    }
+                // Initialiser le contexte audio
+                try {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioContext = new AudioContext();
+                } catch (e) {
+                    console.warn('AudioContext non supporté:', e);
                 }
 
-                function stopAlarm() {
-                    try {
-                        if (audioEl) {
-                            audioEl.pause();
-                            audioEl.currentTime = 0;
-                        }
-                    } catch (e) {
-                        console.warn('Erreur arrêt audio:', e);
-                    }
-                    
-                    alertActive = false;
-                    
-                    // Fermer la modal d'alerte
-                    const modal = document.getElementById('alertModal');
-                    if (modal) modal.style.display = 'none';
-                }
-
-                // Fonction pour arrêter toutes les alarmes (bouton global)
-                function stopAllAlarms() {
-                    stopAlarm();
-                    
-                    // Afficher une notification de confirmation
-                    if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification('Alarmes arrêtées', {
-                            body: 'Toutes les alarmes ont été arrêtées manuellement',
-                            icon: "{{ url_for('static', filename='logo_douanes.png') }}",
-                            silent: true
-                        });
-                    }
-                }
-
-                // Améliorer la fonction showAlert existante
-                async function showAlert(slot) {
-                    if (alertActive) return; // Éviter les doublons
-                    
+                function showAlert(slot){
                     alertActive = true;
                     const modal = document.getElementById('alertModal');
                     if (!modal) return;
@@ -200,7 +379,10 @@
                     // Récupérer le nom de l'utilisateur connecté
                     const userName = "{{ prenom }} {{ nom }}".trim();
                     
-                    // Construire le message d'alerte
+                    // build members by guérite
+                    const byG = {};
+                    (slot.members||[]).forEach(m=>{ byG[m.guerite] = byG[m.guerite] || []; byG[m.guerite].push(m); });
+                    
                     let html = `<h2>ALERTE — VOTRE SERVICE DANS 30 MIN</h2>`;
                     html += `<p><strong>${userName}</strong> - Groupe ${slot.group}<br>${slot.display}</p>`;
                     
@@ -208,10 +390,11 @@
                     let userGuerite = null;
                     let userIsService = false;
                     
-                    for (const member of (slot.members || [])) {
-                        if (member.name.toLowerCase() === userName.toLowerCase()) {
-                            userGuerite = member.guerite;
-                            userIsService = member.service;
+                    for (const [guerite, members] of Object.entries(byG)) {
+                        const userInGuerite = members.find(m => m.name.toLowerCase() === userName.toLowerCase());
+                        if (userInGuerite) {
+                            userGuerite = guerite;
+                            userIsService = userInGuerite.service;
                             break;
                         }
                     }
@@ -225,67 +408,69 @@
                         html += `</div>`;
                     }
                     
-                    html += `<div style="display: flex; gap: 10px; margin-top: 15px;">`;
-                    html += `<button class="stop-alarm-btn" onclick="stopAlarm();">Arrêter l'alarme</button>`;
-                    html += `<button class="stop-all-alarms-btn" onclick="stopAllAlarms();" style="background: #666; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">Tout arrêter</button>`;
-                    html += `</div>`;
-                    
+                    html += `<button class="stop-alarm-btn" onclick="stopAlarm(); stopAllNotifications();">Couper l'alarme</button>`;
                     document.getElementById('alertContent').innerHTML = html;
                     modal.style.display = 'block';
-                    
-                    // Jouer l'alarme en boucle
                     playAlarm();
                 }
 
-                // Vérification des alertes améliorée
-                async function checkAlerts() {
-                    try {
-                        const response = await fetch('/enhanced-alert-check');
-                        const data = await response.json();
-                        
-                        if (data.should_alert && !alertActive) {
-                            showAlert(data.upcoming_alerts[0].slot);
+                function stopAlarm(){
+                    try{
+                        if (audioEl){ 
+                            audioEl.pause(); 
+                            audioEl.currentTime = 0; 
                         }
-                    } catch (error) {
-                        console.error('Erreur vérification alertes:', error);
+                    }catch(e){/*ignore*/}
+                    alertActive = false;
+                    const modal = document.getElementById('alertModal');
+                    if (modal) modal.style.display = 'none';
+                }
+
+                function stopAllNotifications() {
+                    // Arrêter l'audio
+                    if (audioEl) {
+                        audioEl.pause();
+                        audioEl.currentTime = 0;
+                        audioEl = null;
+                    }
+                    
+                    // Fermer toutes les notifications
+                    currentNotifications.forEach(notification => {
+                        notification.close();
+                    });
+                    currentNotifications = [];
+                }
+
+                function playAlarm(){
+                    try {
+                        if (audioEl) {
+                            audioEl.pause();
+                            audioEl.currentTime = 0;
+                        }
+                        audioEl = new Audio("{{ url_for('static', filename='alarm.wav') }}");
+                        audioEl.play().catch(e => console.error('Erreur lecture alarme:', e));
+                    } catch(e) {
+                        console.error('Erreur création audio:', e);
                     }
                 }
 
-                // Démarrer la vérification périodique
-                setInterval(checkAlerts, 30000); // 30 secondes
-
-                // Vérification initiale
-                setTimeout(checkAlerts, 2000);
-
-                // Fonctions pour la rotation des guérites
-                function loadShiftInfo() {
-                    fetch("{{ url_for('current_shift') }}")
-                        .then(res => res.json())
-                        .then(data => {
-                            if (!data || !data.group) {
-                                document.getElementById('shiftDetails').innerHTML = 'Aucun créneau disponible';
-                                return;
-                            }
-                            let html = `<strong>Groupe ${data.group}</strong><br>`;
-                            html += `${data.display}<br><br>`;
-                            const byGuerite = {};
-                            (data.members || []).forEach(m => { 
-                                if (!byGuerite[m.guerite]) byGuerite[m.guerite] = []; 
-                                byGuerite[m.guerite].push(m.name); 
-                            });
-                            Object.keys(byGuerite).sort().forEach(g => { 
-                                const isService = (g === data.guerite_service); 
-                                const style = isService ? 'style="color:#0f0"' : ''; 
-                                html += `<div ${style}><strong>${g}</strong>: ${byGuerite[g].join(', ')}</div>`; 
-                            });
-                            document.getElementById('shiftDetails').innerHTML = html;
-                        })
-                        .catch(err => console.error(err));
+                // Vérifier les alertes périodiquement
+                async function checkAlerts() {
+                    try {
+                        const response = await fetch('/alert-check');
+                        const data = await response.json();
+                        
+                        if (data.should_alert && !alertActive) {
+                            showAlert(data.slot);
+                        }
+                    } catch (error) {
+                        console.error('Erreur vérification alerte:', error);
+                    }
                 }
 
-                // Initialisation
-                loadShiftInfo(); 
-                setInterval(loadShiftInfo, 30000);
+                // Démarrer la vérification
+                setInterval(checkAlerts, 30000); // Vérifier toutes les 30 secondes
+                checkAlerts(); // Vérifier immédiatement
             </script>
         </div>
     </div>

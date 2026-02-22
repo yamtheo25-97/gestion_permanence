@@ -2,17 +2,188 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Sécurité - Administration</title>
+    <title>Sécurité - Programme de permanence</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* NOUVEAU SYSTÈME DE NAVIGATION - INDÉPENDANT */
+        .sidebar-neuf {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+            border-right: 2px solid #444;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 9999;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+        }
+
+        .sidebar-neuf.sidebar-active {
+            transform: translateX(0);
+        }
+
+        .btn-menu-neuf {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10000;
+            background: linear-gradient(135deg, #2a2a2a, #3a3a3a);
+            border: 2px solid #666;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 35px;
+            height: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-menu-neuf:hover {
+            background: linear-gradient(135deg, #3a3a3a, #4a4a4a);
+            border-color: #888;
+            transform: scale(1.05);
+        }
+
+        .btn-menu-neuf span {
+            display: block;
+            height: 3px;
+            background: #fff;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-fermer-sidebar {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 30px;
+            height: 30px;
+            background: #d32f2f;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .btn-fermer-sidebar:hover {
+            background: #b71c1c;
+            transform: scale(1.1);
+        }
+
+        .main-content-neuf {
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+            flex: 1;
+        }
+
+        .sidebar-neuf.sidebar-active ~ .main-content-neuf {
+            margin-left: 280px;
+        }
+
+        .sidebar-neuf h3 {
+            color: #fff;
+            padding: 20px;
+            margin: 0;
+            font-size: 18px;
+            border-bottom: 1px solid #444;
+        }
+
+        .sidebar-neuf a {
+            display: block;
+            color: #eee;
+            padding: 15px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 8px 15px;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .sidebar-neuf a:hover {
+            background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+            transform: translateX(5px);
+            color: #fff;
+        }
+
+        .sidebar-neuf a:first-child {
+            background: linear-gradient(135deg, #0f4c75, #1a5f8a);
+            color: #fff;
+        }
+
+        .sidebar-neuf a:last-child {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+            color: #fff;
+        }
+
+        .rotation-section {
+            padding: 15px;
+            border-top: 1px solid #444;
+            margin-top: 20px;
+        }
+
+        .rotation-section h3 {
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .shift-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .shift-btn:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+
+        .shift-details {
+            margin-top: 10px;
+            font-size: 0.85em;
+            padding: 10px;
+            background: #242424;
+            border-radius: 4px;
+            color: #ccc;
+            line-height: 1.4;
+        }
+    </style>
 </head>
 
 <body class="dashboard-body">
+
     <div class="app-shell">
-        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
-            <span></span><span></span><span></span>
+        <!-- NOUVEAU BOUTON MENU -->
+        <button class="btn-menu-neuf" id="btn-menu-neuf">
+            <span></span>
+            <span></span>
+            <span></span>
         </button>
 
-        <aside class="sidebar collapsed" id="sidebar">
+        <!-- NOUVELLE SIDEBAR -->
+        <aside class="sidebar-neuf" id="sidebar-neuf">
+            <!-- BOUTON DE FERMETURE -->
+            <button class="btn-fermer-sidebar" id="btn-fermer-sidebar">×</button>
+            
             <h3>Administration</h3>
             <a href="{{ url_for('admin') }}">Gestion des personnes</a>
             <a href="{{ url_for('add_person') }}">Ajouter une personne</a>
@@ -24,9 +195,27 @@
             <a href="{{ url_for('manage_credentials') }}">Identifiants</a>
             <a href="{{ url_for('update_hours') }}">Modifier les heures</a>
             <a href="{{ url_for('logout') }}">Déconnexion</a>
+            
+            <div class="rotation-section">
+                <h3>Rotation</h3>
+                <div id="rotationInfo">
+                    <button class="shift-btn" data-guerite="Nord">Nord</button>
+                    <button class="shift-btn" data-guerite="Sud">Sud</button>
+                </div>
+                <div class="shift-details">
+                    Groupe {{ rotation_info.group }} - {{ rotation_info.time }}<br>
+                    Guérite service: {{ rotation_info.guerite }}<br>
+                    {% if rotation_info.members.Nord %}
+                        Nord: {{ rotation_info.members.Nord|join(', ') }}<br>
+                    {% endif %}
+                    {% if rotation_info.members.Sud %}
+                        Sud: {{ rotation_info.members.Sud|join(', ') }}
+                    {% endif %}
+                </div>
+            </div>
         </aside>
 
-        <div class="main-content">
+        <div class="main-content-neuf">
             <header class="dashboard-header">
                 <h1>Sécurité et Notifications</h1>
                 <p>Connecté en tant que <strong>{{ prenom }} {{ nom }}</strong> (Administrateur)</p>
@@ -43,7 +232,7 @@
                         </div>
                         <div style="background: #333; padding: 15px; border-radius: 5px; text-align: center;">
                             <div style="font-size: 24px; color: #ff9800;">Actif</div>
-                            <div style="color: #ccc; margin-top: 5px;">Alertes activées</div>
+                            <div style="color: #ccc; margin-top: 5px;">Alertes actives</div>
                         </div>
                         <div style="background: #444; padding: 15px; border-radius: 5px; text-align: center;">
                             <div style="font-size: 24px; color: #2196F3;">Disponible</div>
@@ -89,29 +278,18 @@
                                 style="background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
                             Tester l'alerte complète
                         </button>
+                        <button onclick="stopAllAlerts()" 
+                                style="background: #d32f2f; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                            Arrêter toutes les alertes
+                        </button>
                     </div>
                 </div>
 
                 <!-- JOURNAL DES ALERTES -->
-                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px;">
                     <h3>Journal des alertes récentes</h3>
                     <div id="alertLog" style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
                         <p style="color: #888;">Chargement du journal...</p>
-                    </div>
-                </div>
-
-                <!-- CONTRÔLE DES ALERTES -->
-                <div style="background: #2a2a2a; padding: 20px; border-radius: 8px;">
-                    <h3>Contrôle des alertes</h3>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
-                        <button onclick="stopAllAlerts()" 
-                                style="background: #d32f2f; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
-                            Arrêter toutes les alarmes
-                        </button>
-                        <button onclick="clearAlertHistory()" 
-                                style="background: #666; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
-                            Effacer l'historique
-                        </button>
                     </div>
                 </div>
             </main>
@@ -119,48 +297,28 @@
     </div>
 
     <script>
-        // Variables globales pour les alarmes
-        let activeAlarms = [];
-        let isSidebarCollapsed = true;
+        // Variables globales pour les alertes
+        let currentAudio = null;
+        let currentNotifications = [];
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const hamburgerBtn = document.getElementById('hamburgerBtn');
-            
-            sidebar.classList.toggle('collapsed');
-            hamburgerBtn.classList.toggle('active');
-            isSidebarCollapsed = !isSidebarCollapsed;
-        }
-        
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const hamburgerBtn = document.getElementById('hamburgerBtn');
-            
-            // Ne fermer la sidebar que si elle est ouverte et qu'on clique à l'extérieur
-            if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target) && !isSidebarCollapsed) {
-                toggleSidebar();
-            }
-        });
-
-        // Fonctions de test améliorées
+        // Fonctions de test
         function testSoundAlert() {
+            stopAllAlerts(); // Arrêter les alertes précédentes
             const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
-            audio.loop = true; // Activer la boucle
+            currentAudio = audio;
             audio.play().catch(e => console.error('Erreur audio:', e));
-            
-            // Ajouter à la liste des alarmes actives
-            activeAlarms.push(audio);
-            addLogEntry('Test alarme sonore démarré', 'warning');
+            addLogEntry('Test alarme sonore', 'success');
         }
 
         function testNotification() {
             if ('Notification' in window) {
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
-                        new Notification('Test de notification', {
+                        const notification = new Notification('Test de notification', {
                             body: 'Ceci est un test du système de notification',
                             icon: '{{ url_for("static", filename="logo_douanes.png") }}'
                         });
+                        currentNotifications.push(notification);
                         addLogEntry('Test notification push', 'success');
                     } else {
                         addLogEntry('Permission notification refusée', 'error');
@@ -172,31 +330,32 @@
         }
 
         async function testEnhancedAlert() {
+            stopAllAlerts(); // Arrêter les alertes précédentes
             try {
                 const response = await fetch('/test-notification');
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Jouer le son en boucle
+                    // Jouer le son
                     const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
-                    audio.loop = true;
+                    currentAudio = audio;
                     audio.play();
-                    activeAlarms.push(audio);
                     
                     // Afficher la notification
                     if ('Notification' in window) {
                         Notification.requestPermission().then(permission => {
                             if (permission === 'granted') {
-                                new Notification('ALERTE DE TEST', {
+                                const notification = new Notification('ALERTE DE TEST', {
                                     body: `Test pour ${data.user_name}`,
                                     icon: '{{ url_for("static", filename="logo_douanes.png") }}',
                                     requireInteraction: true
                                 });
+                                currentNotifications.push(notification);
                             }
                         });
                     }
                     
-                    addLogEntry('Test alerte complète démarré', 'warning');
+                    addLogEntry('Test alerte complète', 'success');
                 } else {
                     addLogEntry('Échec test alerte', 'error');
                 }
@@ -205,28 +364,27 @@
             }
         }
 
-        // Fonction pour arrêter toutes les alarmes
         function stopAllAlerts() {
-            // Arrêter tous les audios actifs
-            activeAlarms.forEach(audio => {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.loop = false;
-            });
-            activeAlarms = [];
-            
-            // Fermer toutes les notifications
-            if ('Notification' in window) {
-                Notification.close();
+            // Arrêter l'audio
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
             }
             
-            addLogEntry('Toutes les alarmes arrêtées', 'success');
+            // Fermer toutes les notifications
+            currentNotifications.forEach(notification => {
+                notification.close();
+            });
+            currentNotifications = [];
+            
+            addLogEntry('Arrêt de toutes les alertes', 'info');
         }
 
         function addLogEntry(message, type) {
             const logDiv = document.getElementById('alertLog');
             const timestamp = new Date().toLocaleTimeString();
-            const color = type === 'success' ? '#4CAF50' : type === 'error' ? '#ff4444' : '#ff9800';
+            const color = type === 'success' ? '#4CAF50' : type === 'error' ? '#ff4444' : '#2196F3';
             
             const entry = document.createElement('div');
             entry.style.cssText = `padding: 8px; margin: 5px 0; background: #333; border-left: 3px solid ${color}; color: #ccc; font-size: 0.9em;`;
@@ -244,47 +402,58 @@
             }
         }
 
-        function clearAlertHistory() {
-            const logDiv = document.getElementById('alertLog');
-            logDiv.innerHTML = '<p style="color: #888;">Historique effacé</p>';
-            addLogEntry('Historique effacé manuellement', 'info');
-        }
-
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
-            // S'assurer que la sidebar est bien rétractée au chargement
-            const sidebar = document.getElementById('sidebar');
-            const hamburgerBtn = document.getElementById('hamburgerBtn');
-            
-            if (!sidebar.classList.contains('collapsed')) {
-                sidebar.classList.add('collapsed');
-                hamburgerBtn.classList.add('active');
-                isSidebarCollapsed = true;
-            }
-            
             addLogEntry('Système de sécurité initialisé', 'info');
-        });
-
-        // Vérifier les alertes améliorées périodiquement
-        setInterval(async function() {
-            try {
-                const response = await fetch('/enhanced-alert-check');
-                const data = await response.json();
-                
-                if (data.should_alert && document.getElementById('soundAlerts').checked) {
-                    // Ne jouer l'alarme que si elle n'est pas déjà en cours
-                    if (activeAlarms.length === 0) {
-                        const audio = new Audio('{{ url_for("static", filename="alarm.wav") }}');
-                        audio.loop = true;
-                        audio.play();
-                        activeAlarms.push(audio);
-                        addLogEntry('Alerte automatique démarrée', 'warning');
-                    }
-                }
-            } catch (error) {
-                console.error('Erreur vérification alerte:', error);
+            
+            // NOUVEAU SYSTÈME DE NAVIGATION - ISOLÉ ET ROBUSTE
+            const btnMenu = document.getElementById('btn-menu-neuf');
+            const btnFermer = document.getElementById('btn-fermer-sidebar');
+            const sidebar = document.getElementById('sidebar-neuf');
+            
+            // Vérifier que les éléments existent
+            if (!btnMenu || !btnFermer || !sidebar) {
+                console.error('Éléments de navigation non trouvés');
+                return;
             }
-        }, 30000); // Vérifier toutes les 30 secondes
+            
+            // FONCTION POUR OUVRIR LA SIDEBAR
+            function ouvrirSidebar() {
+                sidebar.classList.add('sidebar-active');
+                console.log('Sidebar ouverte');
+            }
+            
+            // FONCTION POUR FERMER LA SIDEBAR
+            function fermerSidebar() {
+                sidebar.classList.remove('sidebar-active');
+                console.log('Sidebar fermée');
+            }
+            
+            // ÉVÉNEMENTS
+            // Bouton menu - OUVRIR la sidebar
+            btnMenu.addEventListener('click', function(event) {
+                event.stopPropagation(); // Empêcher la propagation
+                console.log('Clic sur bouton menu');
+                ouvrirSidebar();
+            });
+            
+            // Bouton fermer - FERMER la sidebar
+            btnFermer.addEventListener('click', function(event) {
+                event.stopPropagation(); // Empêcher la propagation
+                console.log('Clic sur bouton fermer');
+                fermerSidebar();
+            });
+            
+            // INTERDICTION FORMELLE : Pas d'ouverture automatique
+            // AUCUN événement sur le body ou le document pour ouvrir la sidebar
+            
+            // Empêcher les clics dans la sidebar de se propager
+            sidebar.addEventListener('click', function(event) {
+                event.stopPropagation();
+            });
+            
+            console.log('Système de navigation initialisé avec succès');
+        });
     </script>
 </body>
 </html>

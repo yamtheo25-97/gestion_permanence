@@ -138,6 +138,11 @@ body {
     transform: translateX(-100%);
 }
 
+.sidebar.sidebar-open {
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+}
+
 .sidebar a {
     display: block;
     color: #eee;
@@ -204,7 +209,8 @@ body {
     transition: margin-left 0.3s ease;
 }
 
-.sidebar:not(.collapsed) + .main-content {
+.sidebar:not(.collapsed) + .main-content,
+.sidebar.sidebar-open + .main-content {
     margin-left: 280px;
 }
 
