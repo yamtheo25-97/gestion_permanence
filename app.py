@@ -167,13 +167,15 @@ def generate_schedule(start_dt, days=30, slot_duration=2):
     for day in range(days):
         current_date = start_dt + timedelta(days=day)
         
-        # Calculer le nombre de créneaux par jour en fonction de la durée
-        daily_slots = 24 // slot_duration  # 24h divisé par la durée
+        # Calculer les créneaux de 6h à 18h (12 heures au total)
+        # Avec des créneaux de 2 heures, cela donne 6 créneaux par jour : 6-8, 8-10, 10-12, 12-14, 14-16, 16-18
+        daily_slots = 6  # Fixé à 6 créneaux par jour (6h à 18h)
         
         for slot_idx in range(daily_slots):
             hour = 6 + (slot_idx * slot_duration)  # Commence à 6h
             
-            if hour >= 24:  # Ne pas dépasser minuit
+            # S'assurer qu'on ne dépasse pas 18h
+            if hour >= 18:
                 break
                 
             slot_time = current_date.replace(hour=hour, minute=0)
@@ -299,7 +301,7 @@ def menu():
 
 @app.route("/menu/data")
 def menu_data():
-    schedule = generate_schedule(START_DATE, days=30)
+    schedule = generate_schedule(START_DATE, days=30, slot_duration=2)
     return jsonify(schedule)
 
 
@@ -310,7 +312,7 @@ def menu_data():
 @app.route("/current-shift")
 def current_shift():
     now = datetime.now()
-    schedule = generate_schedule(START_DATE, days=30)
+    schedule = generate_schedule(START_DATE, days=30, slot_duration=2)
 
     for slot in schedule:
         slot_start = datetime.fromisoformat(slot['iso'])
@@ -341,7 +343,7 @@ def dashboard():
         alertes_utilisateur = pd.DataFrame()
 
     # Récupérer les permanences de l'utilisateur connecté
-    schedule = generate_schedule(START_DATE, days=30)
+    schedule = generate_schedule(START_DATE, days=30, slot_duration=2)
     user_permanences = []
     user_name = f"{session['prenom']} {session['nom']}".strip().lower()
     
@@ -377,7 +379,7 @@ def alert_check():
         return jsonify({'should_alert': False})
     
     now = datetime.now()
-    schedule = generate_schedule(START_DATE, days=30)
+    schedule = generate_schedule(START_DATE, days=30, slot_duration=2)
     
     # Nom complet de l'utilisateur connecté
     user_name = f"{session['prenom']} {session['nom']}".strip().lower()
@@ -405,7 +407,7 @@ def enhanced_alert_check():
         })
     
     now = datetime.now()
-    schedule = generate_schedule(START_DATE, days=30)
+    schedule = generate_schedule(START_DATE, days=30, slot_duration=2)
     
     # Nom complet de l'utilisateur connecté
     user_name = f"{session['prenom']} {session['nom']}".strip().lower()
@@ -708,7 +710,7 @@ def admin_planning():
         return redirect(url_for("login"))
     
     # Récupérer le planning complet
-    schedule = generate_schedule(START_DATE, days=30)
+    schedule = generate_schedule(START_DATE, days=30, slot_duration=2)
     
     # Récupérer le créneau actuel
     now = datetime.now()
